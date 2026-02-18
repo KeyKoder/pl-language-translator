@@ -29,4 +29,5 @@ bin/
 .DS_Store
 
 gen/
+src/.antlr
 antlr-4.13.2-complete.jar

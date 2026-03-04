@@ -58,9 +58,8 @@ formal_paramlist :  | '(' nomparamlist ')';
 nomparamlist : IDENT nomparamlist_p;
 nomparamlist_p : | ',' nomparamlist;
 dec_s_paramlist :  | tipo ',' 'INTENT' '(' tipoparam ')' IDENT ';' dec_s_paramlist;
-dec_d_paramlist : tipo ',' 'INTENT' '(' tipoparam ')' IDENT ';';
 tipoparam : 'IN' | 'OUT' | 'INOUT';
-decfun : 'FUNCTION' IDENT '(' nomparamlist ')' tipo '::' IDENT ';' dec_f_paramlist dec_d_paramlist 'END' 'FUNCTION' IDENT;
+decfun : 'FUNCTION' IDENT '(' nomparamlist ')' tipo '::' IDENT ';' dec_f_paramlist 'END' 'FUNCTION' IDENT;
 dec_f_paramlist : | tipo ',' 'INTENT' '(' 'IN' ')' IDENT ';' dec_f_paramlist;
 
 
@@ -70,10 +69,11 @@ sent : IDENT '=' exp ';' | proc_call ';';
 exp : factor exp_p;
 exp_p : | op exp exp_p;
 op : '+' | '-' | '*' | '/';
-factor : simpvalue | '(' exp ')' | IDENT '(' exp explist ')' | IDENT;
+factor : simpvalue | '(' exp ')' | IDENT subpparamlist;
 explist : ',' exp explist | ;
 proc_call : 'CALL' IDENT subpparamlist;
 subpparamlist : '(' exp explist ')' | ;
+
 
 
 //Syntax for functions implementation

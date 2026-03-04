@@ -2,7 +2,7 @@ grammar Scientific;
 
 
 // prg
-r : prg;
+r : .*;
 
 // Lexer tokens
 
@@ -33,8 +33,7 @@ WS : (' ' | '\t') -> skip;
 // Syntax
 
 prg : 'PROGRAM' IDENT ';' dcllist header sentlist 'END' 'PROGRAM' IDENT subproglist;
-dcllist :  | dcl dcllist_p;
-dcllist_p : | dcl;
+dcllist : | dcl dcllist;
 header :  | 'INTERFACE' headlist 'END' 'INTERFACE';
 headlist : decproc decsubprog | decfun decsubprog;
 decsubprog :  | decproc decsubprog | decfun decsubprog;
@@ -43,32 +42,34 @@ sentlist_p : | sent sentlist_p;
 
 // Syntax declarations
 dcl : defcte | defvar;
-defcte : | tipo ',' 'PARAMETER' '::' IDENT '=' simpvalue ctelist ';' defcte; 
+defcte : tipo ',' 'PARAMETER' '::' IDENT '=' simpvalue ctelist ';'; 
 ctelist :  | ',' IDENT '=' simpvalue ctelist;
 simpvalue : NUM_INT_CONST | NUM_REAL_CONST | STRING_CONST;
-defvar :  | tipo '::' varlist ';' defvar;
+defvar : tipo '::' varlist ';';
 tipo : 'INTEGER' | 'REAL' | 'CHARACTER' charlength;
 charlength :  | '(' NUM_INT_CONST ')';
-varlist : IDENT init | varlist ',' IDENT init;
+varlist : IDENT init varlist_p;
+varlist_p : | ',' IDENT init varlist_p;
 init :  | '=' simpvalue;
 
 // Syntax for subroutines
 decproc : 'SUBROUTINE' IDENT formal_paramlist dec_s_paramlist 'END' 'SUBROUTINE' IDENT;
 formal_paramlist :  | '(' nomparamlist ')';
-nomparamlist : IDENT | IDENT ',' nomparamlist;
+nomparamlist : IDENT nomparamlist_p;
+nomparamlist_p : | ',' nomparamlist;
 dec_s_paramlist :  | tipo ',' 'INTENT' '(' tipoparam ')' IDENT ';' dec_s_paramlist;
 dec_d_paramlist : tipo ',' 'INTENT' '(' tipoparam ')' IDENT ';';
 tipoparam : 'IN' | 'OUT' | 'INOUT';
 decfun : 'FUNCTION' IDENT '(' nomparamlist ')' tipo '::' IDENT ';' dec_f_paramlist dec_d_paramlist 'END' 'FUNCTION' IDENT;
-dec_f_paramlist :  | dec_f_paramlist tipo ',' 'INTENT' '(' 'IN' ')' IDENT ';';
+dec_f_paramlist : | tipo ',' 'INTENT' '(' 'IN' ')' IDENT ';' dec_f_paramlist;
 
 
 
 //Syntax for assignations
 sent : IDENT '=' exp ';' | proc_call ';';
-exp : exp op exp | factor;
-op : oparit;
-oparit : '+' | '-' | '*' | '/';
+exp : factor exp_p;
+exp_p : | op exp exp_p;
+op : '+' | '-' | '*' | '/';
 factor : simpvalue | '(' exp ')' | IDENT '(' exp explist ')' | IDENT;
 explist : ',' exp explist | ;
 proc_call : 'CALL' IDENT subpparamlist;

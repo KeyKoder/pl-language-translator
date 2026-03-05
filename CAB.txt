@@ -1,0 +1,41 @@
+P1 -> {pg}
+Dl -> {int, r, ch, ',', !}
+C1 -> {if, !}
+C1l -> {sr, f}
+DSP2 -> {sr, f, !}
+Sl -> {id, c}
+S´ -> {id, c, !}
+
+D -> {int, r, ch, ','}
+DC2 -> {int, r, ch}
+C2l -> {','}
+SV -> {ni, nr, sc}
+DV -> {int, r, ch, !}
+T -> {int, r, ch}
+Vl -> {id}
+V´ -> {',', !}
+I -> {=, !}
+C3 -> {'(', !}
+
+DP2 -> {sr}
+FP3l -> {'(', !}
+Pl -> {id}
+N´ -> {',', !}
+DPl -> {int, r, ch}
+TP -> {in, out, io}
+DF -> {f}
+DFPl -> {int, r, ch, !}
+
+S -> {id, c}
+E -> {ni, nr, sc, '(', id}
+O -> {+, -, *, /}
+F -> {ni, nr, sc, '(', id}
+El -> {',', !}
+PC -> {c}
+SP3l -> {'(', !}
+E´ -> {+, -, *, /, !}
+
+SP1l -> {sr, f, !}
+CD -> {sr}
+CF -> {f}
+

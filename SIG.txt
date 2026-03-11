@@ -1,0 +1,41 @@
+P1 -> {$}
+Dl -> CAB(Sl e sr id) U CAB(Sl e sr id) U CAB(C1 Sl e pg id DSP2) = {id, c} U {id, c} U {if} = {id, c, if}
+C1 -> CAB(Sl e pg id DSP2) = {id, c}
+C1l -> CAB(e if) = {e} 
+DSP2 -> SIG(C1l) = {e}
+Sl -> CAB(e pg id DSP2) U CAB(e sr id) U CAB(id = E ; e f id) = {e, id}
+S´ -> SIG(Sl) = {e, id}
+
+D -> CAB´(Dl) U SIG(Dl) = {int, r, ch} U {id, c, if} = {int, r, ch, id, c, if}
+DC2 -> SIG(D) = {int, r, ch, id, c, if}
+C2l -> CAB(;) = {;}
+SV -> SIG(C2l) U SIG(I) U SIG(F) = {;} U {',', ;} U {')', ',', ;, +, -, *, /} = {')', ',', ;, +, -, *, /}
+DV -> SIG(D) = {int, r, ch, id, c, if}
+T -> CAB(:: Vl ; DV) U CAB(',' it '(' TP ')' id ; DPL) U CAB(:: id ; DFPl e f id) = {::, ','}
+Vl -> CAB(;) = {;}
+V´ -> SIG(Vl) = {;}
+I -> CAB(V´) U SIG(Vl) U SIG(V´) = {','} U {;} U {;} = {',', ;}
+C3 -> SIG(T) = {::, ','}
+
+DP2 -> CAB(DSP2) U SIG(C1l) U SIG(DSP2) = {sr, f} U {e} U {e} = {sr, e, f}
+FP3l -> CAB(DPl) U CAB(e) U CAB(Dl) U CAB(Sl) = {int, r, ch} U {e} U {int, r, ch} U {id, c} = {int, r, ch, e, id, c}
+Pl -> CAB(')') U SIG(N´) = {')'}
+N´ -> SIG(Pl) = {')'}
+DPl -> CAB(e sr id) U CAB(Dl) U CAB(Sl) = {e} U {int, r, ch} U {id, c} = {e, int, r, ch, id, c}
+TP -> CAB(')') = {')'}
+DF -> CAB(DSP2) U SIG(DSP2) = {sr, f} U {e} = {sr, f, e}
+DFPl -> CAB(e f id) U CAB(Dl Sl id = E ; e f id) U CAB(Sl) = {e} U {int, r, ch} U {id, c} = {e, int, r, ch, id, c}
+
+S -> CAB(S´) U SIG(Sl) U SIG(S´) = {id, c} U {e, id} U {e, id} = {c, e, id}
+E -> CAB(')') U CAB(El) U SIG(El) U CAB(E´) U SIG(E´) U CAB(;) = {')'} U {','} U {')'} U {+, -, *, /} U {;} = {')', ',', ;, +, -, *, /}
+O -> CAB(E) = {ni, nr, sc, '(', id}
+F -> CAB(E´) U SIG(E) = {+, -, *, /} U {')', ',', ;, +, -, *, /} = {')', ',', ;, +, -, *, /}
+El -> CAB(')') = {')'} 
+PC -> CAB(;) = {;}
+SP3l -> SIG(F) U SIG(PC) = {')', ',', ;, +, -, *, /} U {;} = {')', ',', ;, +, -, *, /}
+E´ -> SIG(E) = {')', ',', ;, +, -, *, /}
+
+SP1l -> SIG(P1) = {$}
+CD -> CAB(SP1l) U SIG(SP1l) = {sr, f} U {$} = {$, sr, f}
+CF -> CAB(SP1l) U SIG(SP1l) = {sr, f} U {$} = {$, sr, f}
+

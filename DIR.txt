@@ -1,7 +1,10 @@
 (P1 -> pg id ; Dl C1 Sl e pg id SP1l) -> {pg}
 
 (Dl -> !) -> SIG(Dl) = {id, c, if}
-(Dl -> D Dl) -> CAB(D) U DIR(Dl -> Dl) = {int, r, ch} U CAB(Dl) U DIR(Dl -> !) = {int, r, ch} U {int, r, ch} U {id, c, if} = {int, r, ch, id, c, if}
+(Dl -> T D) -> CAB(T) = {int, r, ch} 
+
+(D -> ',' pr :: id = SV C2l ; Dl) -> {','}
+(D -> :: Vl ; Dl) -> {::}
 
 (C1 -> !) -> SIG(C1) = {id, c}
 (C1 -> if C1l e if) -> {if}
@@ -15,22 +18,14 @@
 
 (Sl -> S S´) -> CAB(S) = {id, c}
 
-(S´ -> !) -> SIG(S´) = {e, id}		ERROR
+(S´ -> !) -> SIG(S´) = {e, id}
 (S´ -> S S´) -> CAB(S) = {id, c}
-
-(D -> DC2) -> CAB(DC2) = {int, r, ch}		ERROR
-(D -> DV) -> CAB(DV) U DIR(D -> !) = {int, r, ch} U {int, r, ch, id, c, if} = {int, r, ch, id, c, if}
-
-(DC2 -> T ',' pr :: id = SV C2l ;) -> CAB(T) = {int, r, ch}
 
 (C2l -> ',' id = SV) -> {','}
 
 (SV -> ni) -> {ni}
 (SV -> nr) -> {nr}
 (SV -> sc) -> {sc}
-
-(DV -> !) -> SIG(DV) = {int, r, ch, id, c, if}		ERROR
-(DV -> T :: Vl ; DV) -> CAB(T) = {int, r, ch}
 
 (T -> int) -> {int}
 (T -> r) -> {r}
@@ -57,7 +52,7 @@
 (N´ -> !) -> SIG(N´) = {')'}
 (N´ -> ',' Pl) -> {','}
 
-(DPl -> !) -> SIG(DPl) = {e, int, r, ch, id, c}		ERROR
+(DPl -> !) -> SIG(DPl) = {e}
 (DPl -> T ',' it '(' TP ')' id ; DPL) -> CAB(T) = {int, r, ch}
 
 (TP -> in) -> {in}
@@ -66,7 +61,7 @@
 
 (DF -> f id '(' Pl ')' T :: id ; DFPl e f id) -> {f}
 
-(DFPl -> !) -> SIG(DFPl) = {e, int, r, ch, id, c}		ERROR
+(DFPl -> !) -> SIG(DFPl) = {e}
 (DFPl -> T ',' it '(' in ')' id ; DFPl) -> CAB(T) = {int, r, ch}
 
 (S -> id = e ;) -> {id}
@@ -91,14 +86,33 @@
 (SP3l -> !) -> SIG(SP3l) = {')', ',', ;, +, -, *, /}
 (SP3l -> '(' E El ')') -> {'('}
 
-(E´ -> !) -> SIG(E´) = {')', ',', ;, +, -, *, /}		ERROR
-(E´ -> O E E´) -> CAB(O) = {+, -, *, /}
+(E´ -> !) -> SIG(E´) = {')', ',', ;}
+(E´ -> O F E´) -> CAB(O) = {+, -, *, /}
 
 (SP1l -> !) -> SIG(SP1l) = {$}
 (SP1l -> CD SP1l) -> CAB(CD) = {sr}
 (SP1l -> CF SP1l) -> CAB(CF) = {f}
 
-(CD -> sr id FP3l DPl Dl Sl e sr id) -> {sr}
+(CD -> sr id FP3l Y1 Sl e sr id) -> {sr}
 
-(CF -> f id '(' Pl ')' T :: id ; DFPl Dl Sl id = E ; e f id) -> {f}
+(CF -> f id '(' Pl ')' T :: id ; Z1 Sl id = E ; e f id) -> {f}
+
+(Y1 -> !) -> SIG(Y1) = {id, c}
+(Y1 -> T Y2) -> CAB(T) = {int, r, ch}
+
+(Y2 -> ',' Y3) -> {','}
+(Y2 -> :: Vl ; Dl) -> {::}
+
+(Y3 -> it '(' TP ')' id ; Y1) -> {it}
+(Y3 -> pr :: id = SV C2l ; Dl) -> {pr}
+
+(Z1 -> !) -> SIG(Z1) = {id, c}
+(Z1 -> T Z2) -> CAB(T) = {int, r, ch}
+
+(Z2 -> ',' Z3) -> {','}
+(Z2 -> :: Vl ; Dl) -> {::}
+
+(Z3 -> it '(' in ')' id ; Z1) -> {it}
+(Z3 -> pr :: id = SV C2l ; Dl) -> {pr}
+
 

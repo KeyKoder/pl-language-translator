@@ -1,16 +1,14 @@
 P1 -> pg id ; Dl C1 Sl e pg id SP1l
-Dl -> ! | D Dl
+Dl -> ! | T D
 C1 -> ! | if C1l e if
 C1l -> DP2 DSP2 | DF DSP2
 DSP2 -> ! | DP2 DSP2 | DF DSP2
 Sl -> S S´
 S´ -> ! | S S´
 
-D -> DC2 | DV
-DC2 -> T ',' pr :: id = SV C2l ;
+D -> ',' pr :: id = SV C2l ; Dl | :: Vl ; Dl
 C2l -> ',' id = SV
 SV -> ni | nr | sc
-DV -> ! | T :: Vl ; DV
 T -> int | r | ch C3
 Vl -> id I V´
 V´ -> ! | ',' id I V´
@@ -36,5 +34,19 @@ SP3l -> ! | '(' E El ')'
 E´ -> ! | O F E´ 
 
 SP1l -> ! | CD SP1l | CF SP1l 
-CD -> sr id FP3l DPl Dl Sl e sr id 
-CF -> f id '(' Pl ')' T :: id ; DFPl Dl Sl id = E ; e f id 
+CD -> sr id FP3l Y1 Sl e sr id
+CF -> f id '(' Pl ')' T :: id ; Z1 Sl id = E ; e f id
+
+Y1 -> T Y2 | !
+Y2 -> ',' Y3 | :: Vl ; Dl
+Y3 -> it '(' TP ')' id ; Y1 | pr :: id = SV C2l ; Dl
+
+Z1 -> T Z2 | !
+Z2 -> ',' Z3 | :: Vl ; Dl
+Z3 -> it '(' in ')' id ; Z1 | pr :: id = SV C2l ; Dl
+
+
+
+
+
+

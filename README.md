@@ -1,4 +1,4 @@
-# pl-langauge-translator
+# pl-language-translator
 
 Repo for our assignment for the 3rd year Language Processors class at URJC CS.
 

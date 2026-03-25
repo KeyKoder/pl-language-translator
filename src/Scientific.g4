@@ -2,9 +2,11 @@ grammar Scientific;
 
 
 // prg
-r : .*;
+r : prg;
 
 // Lexer tokens
+
+STRING_CONST : DOUBLE_QUOTE_STRING | SIMPLE_QUOTE_STRING;
 
 DOUBLE_QUOTE_STRING : '"' (~('"')|'""')* '"';
 // DOUBLE_QUOTE_STRING : '"' PLAINTEXT* (('\'' | '""')* PLAINTEXT)* '"';
@@ -12,11 +14,12 @@ DOUBLE_QUOTE_STRING : '"' (~('"')|'""')* '"';
 SIMPLE_QUOTE_STRING : '\'' (~('\'')|'\'\'')* '\'';
 // SIMPLE_QUOTE_STRING : '\'' PLAINTEXT* (('"' | '\'\'')* PLAINTEXT)* '\'';
 
-STRING_CONST : DOUBLE_QUOTE_STRING | SIMPLE_QUOTE_STRING;
 
 IDENT : [a-zA-Z] [a-zA-Z0-9_]*;
 
 NUM_INT_CONST : '-'? DIGIT+;
+
+NUM_REAL_CONST : NUM_FIXED_CONST | NUM_EXP_CONST | NUM_MIXED_CONST;
 
 NUM_FIXED_CONST : '-'? DIGIT+ '.' DIGIT+;
 
@@ -24,16 +27,15 @@ NUM_EXP_CONST : '-'? DIGIT+ [eE] '-'? DIGIT+;
 
 NUM_MIXED_CONST : '-'? DIGIT+ '.' DIGIT+ [eE] '-'? DIGIT+;
 
-NUM_REAL_CONST : NUM_FIXED_CONST | NUM_EXP_CONST | NUM_MIXED_CONST;
 
 COMMENTS : '!' PLAINTEXT NL;
 
-WS : (' ' | '\t') -> skip;
+WS : (' ' | '\t' | NL) -> skip;
 
 // Syntax
 
 prg : 'PROGRAM' IDENT ';' dcllist header sentlist 'END' 'PROGRAM' IDENT subproglist;
-dcllist : | dcl dcllist;
+dcllist : | tipo dcl;
 header :  | 'INTERFACE' headlist 'END' 'INTERFACE';
 headlist : decproc decsubprog | decfun decsubprog;
 decsubprog :  | decproc decsubprog | decfun decsubprog;
@@ -41,11 +43,9 @@ sentlist : sent sentlist_p;
 sentlist_p : | sent sentlist_p;
 
 // Syntax declarations
-dcl : defcte | defvar;
-defcte : tipo ',' 'PARAMETER' '::' IDENT '=' simpvalue ctelist ';'; 
+dcl : ',' 'PARAMETER' '::' IDENT '=' simpvalue ctelist ';' dcllist | '::' varlist ';' dcllist;
 ctelist :  | ',' IDENT '=' simpvalue ctelist;
 simpvalue : NUM_INT_CONST | NUM_REAL_CONST | STRING_CONST;
-defvar : tipo '::' varlist ';';
 tipo : 'INTEGER' | 'REAL' | 'CHARACTER' charlength;
 charlength :  | '(' NUM_INT_CONST ')';
 varlist : IDENT init varlist_p;
@@ -78,9 +78,18 @@ subpparamlist : '(' exp explist ')' | ;
 
 //Syntax for functions implementation
 subproglist : codproc subproglist | codfun subproglist | ;
-codproc : 'SUBROUTINE' IDENT formal_paramlist dec_s_paramlist dcllist sentlist 'END' 'SUBROUTINE' IDENT;
-codfun : 'FUNCTION' IDENT '(' nomparamlist ')' tipo '::' IDENT ';' dec_f_paramlist dcllist sentlist IDENT '=' exp ';'
+codproc : 'SUBROUTINE' IDENT formal_paramlist y1 sentlist 'END' 'SUBROUTINE' IDENT;
+codfun : 'FUNCTION' IDENT '(' nomparamlist ')' tipo '::' IDENT ';' z1 sentlist IDENT '=' exp ';'
     'END' 'FUNCTION' IDENT;
+
+
+y1 : | tipo y2;
+y2 : ',' y3 | '::' varlist ';' dcllist;
+y3 : 'INTENT' '(' tipoparam ')' IDENT ';' y1 | 'PARAMETER' '::' IDENT '=' simpvalue ctelist ';' dcllist;
+
+z1 : | tipo z2;
+z2 : ',' z3 | '::' varlist ';' dcllist;
+z3 : 'INTENT' '(' 'IN' ')' IDENT ';' z1 | 'PARAMETER' '::' IDENT '=' simpvalue ctelist ';' dcllist;
 
 
 fragment 

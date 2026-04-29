@@ -1,5 +1,9 @@
 grammar Scientific;
 
+@members {
+    Program p;
+}
+
 
 // prg
 r : prg;
@@ -34,7 +38,7 @@ WS : (' ' | '\t' | NL) -> skip;
 
 // Syntax
 
-prg : 'PROGRAM' IDENT ';' dcllist header sentlist 'END' 'PROGRAM' IDENT subproglist;
+prg : 'PROGRAM' IDENT ';' {p = new Program();} dcllist header sentlist 'END' 'PROGRAM' IDENT subproglist {System.out.println(p);};
 dcllist : | tipo dcl;
 header :  | 'INTERFACE' headlist 'END' 'INTERFACE';
 headlist : decproc decsubprog | decfun decsubprog;
@@ -43,11 +47,11 @@ sentlist : sent sentlist_p;
 sentlist_p : | sent sentlist_p;
 
 // Syntax declarations
-dcl : ',' 'PARAMETER' '::' IDENT '=' simpvalue ctelist ';' dcllist | '::' varlist ';' dcllist;
-ctelist :  | ',' IDENT '=' simpvalue ctelist;
+dcl : ',' 'PARAMETER' '::' IDENT '=' simpvalue {p.dcls.add("#define "+$IDENT.text+" "+$simpvalue.text);} ctelist ';' dcllist | '::' varlist ';' dcllist;
+ctelist :  | ',' IDENT '=' simpvalue {p.dcls.add("#define "+$IDENT.text+" "+$simpvalue.text);} ctelist;
 simpvalue : NUM_INT_CONST | NUM_REAL_CONST | STRING_CONST;
-tipo : 'INTEGER' | 'REAL' | 'CHARACTER' charlength;
-charlength :  | '(' NUM_INT_CONST ')';
+tipo returns [String s] : 'INTEGER' {$s = "int";} | 'REAL' {$s = "float";} | 'CHARACTER' {$s = "char";} charlength {$s += "["+$charlength.len+"]";} ;
+charlength returns [int len] :  | '(' NUM_INT_CONST {$len = Integer.parseInt($NUM_INT_CONST.text);} ')';
 varlist : IDENT init varlist_p;
 varlist_p : | ',' IDENT init varlist_p;
 init :  | '=' simpvalue;

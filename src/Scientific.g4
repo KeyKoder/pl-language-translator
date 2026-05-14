@@ -57,14 +57,14 @@ varlist_p : | ',' IDENT init varlist_p;
 init :  | '=' simpvalue;
 
 // Syntax for subroutines
-decproc : 'SUBROUTINE' IDENT formal_paramlist dec_s_paramlist 'END' 'SUBROUTINE' IDENT;
+decproc : 'SUBROUTINE' procName=IDENT formal_paramlist dec_s_paramlist[new ArrayList<Pair<String, String>>()] 'END' 'SUBROUTINE' procNameEnd=IDENT {p.functions.put($procName.text, new Function("void", $procName.text, $dec_s_paramlist.params_s));};
 formal_paramlist :  | '(' nomparamlist ')';
 nomparamlist : IDENT nomparamlist_p;
 nomparamlist_p : | ',' nomparamlist;
-dec_s_paramlist :  | tipo ',' 'INTENT' '(' tipoparam ')' IDENT ';' dec_s_paramlist;
+dec_s_paramlist[List<Pair<String, String>> params_h] returns [List<Pair<String, String>> params_s] : {$params_s = $params_h;} | tipo ',' 'INTENT' '(' tipoparam ')' IDENT ';' dec_s_paramlist[$params_h] {$params_s = $dec_s_paramlist.params_s; $params_s.add(0, new Pair<String, String>($tipo.s, $IDENT.text));};
 tipoparam : 'IN' | 'OUT' | 'INOUT';
-decfun : 'FUNCTION' IDENT '(' nomparamlist ')' tipo '::' IDENT ';' dec_f_paramlist 'END' 'FUNCTION' IDENT;
-dec_f_paramlist : | tipo ',' 'INTENT' '(' 'IN' ')' IDENT ';' dec_f_paramlist;
+decfun : 'FUNCTION' funcName=IDENT '(' nomparamlist ')' tipo '::' funcNameType=IDENT ';' dec_f_paramlist[new ArrayList<Pair<String, String>>()] 'END' 'FUNCTION' funcNameEnd=IDENT {p.functions.put($funcName.text, new Function($tipo.s, $funcName.text, $dec_f_paramlist.params_s));};
+dec_f_paramlist[List<Pair<String, String>> params_h] returns [List<Pair<String, String>> params_s] : {$params_s = $params_h;} | tipo ',' 'INTENT' '(' 'IN' ')' IDENT ';' dec_f_paramlist[$params_h] {$params_s = $dec_f_paramlist.params_s; $params_s.add(0, new Pair<String, String>($tipo.s, $IDENT.text));};
 
 
 

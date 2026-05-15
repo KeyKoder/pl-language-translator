@@ -42,16 +42,19 @@ WS : (' ' | '\t' | NL) -> skip;
     Atributos de p:
     p.dcls: guarda los #define
     p.vars: guarda la declaración de las varibles globales
+    p.functions: declaraciones de funciones y subrutinas
+    p.main: guarda el codigo de la funcion main
+    p.funimpl: guarda las funciones implementadas
 
 */
 
-prg : 'PROGRAM' IDENT ';' {p = new Program();} dcllist header sentlist 'END' 'PROGRAM' IDENT subproglist {System.out.println(p);};
+prg : 'PROGRAM' IDENT ';' {p = new Program();} dcllist header sentlist {p.main = "void main(void)\n{\n" + $sentlist.lista + "}\n"} 'END' 'PROGRAM' IDENT subproglist {System.out.println(p);};
 dcllist : | tipo dcl[$tipo.s]; //Le pasa el tipo a dcl para las declaraciones de variables, que es necesario escribirlo
 header :  | 'INTERFACE' headlist 'END' 'INTERFACE';
 headlist : decproc decsubprog | decfun decsubprog;
 decsubprog :  | decproc decsubprog | decfun decsubprog;
-sentlist : sent sentlist_p;
-sentlist_p : | sent sentlist_p;
+sentlist returns [String lista]: sent sentlist_p {$lista = $sent.s + $sentlist_p.lista_p;}; //Devuelve un String con todas las sentencias ya procesadas y en un formato correcto (string = s1 \n s2 \n s3...)
+sentlist_p returns [String lista_p]: {lista_p = "";}| sent sl2=sentlist_p {$lista_p = $sent.s + $sl2.lista_p;};
 
 // Syntax declarations (TODO: Creo que está terminado, revisar)
 dcl [String type]: ',' 'PARAMETER' '::' IDENT '=' simpvalue {p.dcls.add("#define "+$IDENT.text+" "+$simpvalue.val + "; \n");} ctelist ';' dcllist | '::'{p.vars.add($type + " ");} varlist ';' {p.vars.add(";\n");} dcllist;
@@ -64,7 +67,7 @@ simpvalue returns [String val]: NUM_INT_CONST {$val = $NUM_INT_CONST.text;}| NUM
 tipo returns [String s] : 'INTEGER' {$s = "int";} | 'REAL' {$s = "float";} | 'CHARACTER' {$s = "char";} charlength {$s += "["+$charlength.len+"]";} ;
 charlength returns [int len] :  | '(' NUM_INT_CONST {$len = Integer.parseInt($NUM_INT_CONST.text);} ')';
 varlist : IDENT {p.vars.add($IDENT.text);} init varlist_p; //Añade a las vars la primera del tipo anterior y llama a las siguientes
-varlist_p : | ',' IDENT {p.vars.add(", " + $IDENT.txt);} init varlist_p; //Añade la siguiente variable y continúa llamando a las siguientes
+varlist_p : | ',' IDENT {p.vars.add(", " + $IDENT.text);} init varlist_p; //Añade la siguiente variable y continúa llamando a las siguientes
 init :  | '=' simpvalue {p.vars.add(" = " + $simpvalue.val);}; //Da valor inicial a las variables que lo tengan
 
 
@@ -80,15 +83,16 @@ dec_f_paramlist[List<Pair<String, String>> params_h] returns [List<Pair<String, 
 
 
 
-//Syntax for assignations
-sent : IDENT '=' exp ';' | proc_call ';';
-exp : factor exp_p;
-exp_p : | op exp exp_p;
-op : '+' | '-' | '*' | '/';
-factor : simpvalue | '(' exp ')' | IDENT subpparamlist;
-explist : ',' exp explist | ;
-proc_call : 'CALL' IDENT subpparamlist;
-subpparamlist : '(' exp explist ')' | ;
+//Syntax for assignations (TODO: Creo que está terminado, revisar)
+//Cada línea añade lo que tiene, y el formato de cada tipo de sentencia se pone bien en cada uno (espacios, saltos de línea, etc)
+sent returns [String s]: IDENT '=' exp ';' {$s = $IDENT.text + " = " + $exp.val + ";\n";}| proc_call ';' {$s = $proc_call.val + ";\n";};
+exp returns [String val]: factor exp_p {$val = $factor.val + " " + $exp_p.val;};
+exp_p returns [String val]: op exp exp_p  {$val = $op.val + " " + $exp.val + " " + $exp_p.val;} | {$val = "";};
+op returns [String val]: '+' {$val = '+';} | '-' {$val = '-';} | '*' {$val = '*';} | '/' {$val = '/';};
+factor returns [String val]: simpvalue {$val = $simpvalue.val;} | '(' exp ')' {$val = '(' + $exp.val + ')';} | IDENT subpparamlist {$val = $IDENT.text + " " + $subpparamlist.val};
+explist returns [String val]: ',' exp expl1=explist {$val = ", " + $exp.val + expl1.val;}| {$val = "";};
+proc_call returns [String val]: 'CALL' IDENT subpparamlist {$val = $IDENT.text + $subpparamlist.val;};
+subpparamlist returns [String val]: '(' exp explist ')' {$val = '(' + $exp.val + $explist.val;} | {$val = "";};
 
 
 

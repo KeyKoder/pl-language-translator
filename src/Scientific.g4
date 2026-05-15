@@ -38,23 +38,35 @@ WS : (' ' | '\t' | NL) -> skip;
 
 // Syntax
 
+/*
+    Atributos de p:
+    p.dcls: guarda los #define
+    p.vars: guarda la declaración de las varibles globales
+
+*/
+
 prg : 'PROGRAM' IDENT ';' {p = new Program();} dcllist header sentlist 'END' 'PROGRAM' IDENT subproglist {System.out.println(p);};
-dcllist : | tipo dcl;
+dcllist : | tipo dcl[$tipo.s]; //Le pasa el tipo a dcl para las declaraciones de variables, que es necesario escribirlo
 header :  | 'INTERFACE' headlist 'END' 'INTERFACE';
 headlist : decproc decsubprog | decfun decsubprog;
 decsubprog :  | decproc decsubprog | decfun decsubprog;
 sentlist : sent sentlist_p;
 sentlist_p : | sent sentlist_p;
 
-// Syntax declarations
-dcl : ',' 'PARAMETER' '::' IDENT '=' simpvalue {p.dcls.add("#define "+$IDENT.text+" "+$simpvalue.text);} ctelist ';' dcllist | '::' varlist ';' dcllist;
-ctelist :  | ',' IDENT '=' simpvalue {p.dcls.add("#define "+$IDENT.text+" "+$simpvalue.text);} ctelist;
-simpvalue : NUM_INT_CONST | NUM_REAL_CONST | STRING_CONST;
+// Syntax declarations (TODO: Creo que está terminado, revisar)
+dcl [String type]: ',' 'PARAMETER' '::' IDENT '=' simpvalue {p.dcls.add("#define "+$IDENT.text+" "+$simpvalue.val + "; \n");} ctelist ';' dcllist | '::'{p.vars.add($type + " ");} varlist ';' {p.vars.add(";\n");} dcllist;
+//TODO: he creado un nuevo atributo p.vars porque todos los #define tienen que ir seguidos al final, pero la gramática permite que estén intercalados con las declaraciones de variables, así que hay que guardarlos en sitios distintos para conservar ese orden
+//1: Hace el primer #define id xxx; y llama a laos demás del mismo tipo y al terminar al resto de constantes
+//2: Hace las declaraciones de variables, escribe el tipo y llama al resto de vars de ese mismo tipo
+ctelist :  | ',' IDENT '=' simpvalue {p.dcls.add("#define " + $IDENT.text + " "+ $simpvalue.val);} ctelist;
+//Añade todos los #define del tipo anterior (en dcl)
+simpvalue returns [String val]: NUM_INT_CONST {$val = $NUM_INT_CONST.text;}| NUM_REAL_CONST {$val = $NUM_REAL_CONST.text;}| STRING_CONST {$val = $STRING_CONST.text;};
 tipo returns [String s] : 'INTEGER' {$s = "int";} | 'REAL' {$s = "float";} | 'CHARACTER' {$s = "char";} charlength {$s += "["+$charlength.len+"]";} ;
 charlength returns [int len] :  | '(' NUM_INT_CONST {$len = Integer.parseInt($NUM_INT_CONST.text);} ')';
-varlist : IDENT init varlist_p;
-varlist_p : | ',' IDENT init varlist_p;
-init :  | '=' simpvalue;
+varlist : IDENT {p.vars.add($IDENT.text);} init varlist_p; //Añade a las vars la primera del tipo anterior y llama a las siguientes
+varlist_p : | ',' IDENT {p.vars.add(", " + $IDENT.txt);} init varlist_p; //Añade la siguiente variable y continúa llamando a las siguientes
+init :  | '=' simpvalue {p.vars.add(" = " + $simpvalue.val);}; //Da valor inicial a las variables que lo tengan
+
 
 // Syntax for subroutines
 decproc : 'SUBROUTINE' procName=IDENT formal_paramlist dec_s_paramlist[new ArrayList<Pair<String, String>>()] 'END' 'SUBROUTINE' procNameEnd=IDENT {p.functions.put($procName.text, new Function("void", $procName.text, $dec_s_paramlist.params_s));};

@@ -1,0 +1,32 @@
+#define max_val 100
+#define min_val -50
+#define pi 3.1415
+#define e 2.71828
+#define c 2e-6
+
+int contador = 0, acumulador;
+float promedio, total = 0.0;
+char mensaje1[10] = 'Hola', mensaje2[10] = 'Mundo';
+
+void ImprimirMensaje(char texto[]);
+
+int Sumar(int a, int b);
+
+void main(void)
+{
+	
+	contador = contador + 1;
+	total = total + 45;
+	ImprimirMensaje("Bienvenido);
+	promedio = total / 2.0;
+}
+
+void ImprimirMensaje(char texto[]){
+	MostrarEnPantalla(texto);
+}
+
+int Sumar(int a, int b){
+	int suma;
+	suma = a + b;
+	return suma;
+}

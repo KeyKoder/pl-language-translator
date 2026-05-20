@@ -48,38 +48,38 @@ WS : (' ' | '\t' | NL) -> skip;
 
 */
 
-prg : 'PROGRAM' IDENT ';' {p = new Program();} dcllist header sentlist {p.main = "void main(void)\n{\n" + $sentlist.lista + "}\n"} 'END' 'PROGRAM' IDENT subproglist {System.out.println(p);};
-dcllist : | tipo dcl[$tipo.s]; //Le pasa el tipo a dcl para las declaraciones de variables, que es necesario escribirlo
+prg : 'PROGRAM' IDENT ';' {p = new Program();} dcllist header sentlist {p.main = "void main(void)\n{\n" + $sentlist.lista + "}\n";} 'END' 'PROGRAM' IDENT subproglist {System.out.println(p);};
+dcllist : | tipo dcl[$tipo.type]; //Le pasa el tipo a dcl para las declaraciones de variables, que es necesario escribirlo
 header :  | 'INTERFACE' headlist 'END' 'INTERFACE';
 headlist : decproc decsubprog | decfun decsubprog;
 decsubprog :  | decproc decsubprog | decfun decsubprog;
 sentlist returns [String lista]: sent sentlist_p {$lista = $sent.s + $sentlist_p.lista_p;}; //Devuelve un String con todas las sentencias ya procesadas y en un formato correcto (string = s1 \n s2 \n s3...)
-sentlist_p returns [String lista_p]: {lista_p = "";}| sent sl2=sentlist_p {$lista_p = $sent.s + $sl2.lista_p;};
+sentlist_p returns [String lista_p]: {$lista_p = "";}| sent sl2=sentlist_p {$lista_p = $sent.s + $sl2.lista_p;};
 
 // Syntax declarations (TODO: Creo que está terminado, revisar)
-dcl [String type]: ',' 'PARAMETER' '::' IDENT '=' simpvalue {p.dcls.add("#define "+$IDENT.text+" "+$simpvalue.val + "; \n");} ctelist ';' dcllist | '::'{p.vars.add($type + " ");} varlist ';' {p.vars.add(";\n");} dcllist;
+dcl [Type type]: ',' 'PARAMETER' '::' IDENT '=' simpvalue {p.dcls.add("#define "+$IDENT.text+" "+$simpvalue.val);} ctelist ';' dcllist | '::' varlist[new GlobalVariables($type)] {p.vars.add($varlist.vars_s);} ';' dcllist;
 //TODO: he creado un nuevo atributo p.vars porque todos los #define tienen que ir seguidos al final, pero la gramática permite que estén intercalados con las declaraciones de variables, así que hay que guardarlos en sitios distintos para conservar ese orden
 //1: Hace el primer #define id xxx; y llama a laos demás del mismo tipo y al terminar al resto de constantes
 //2: Hace las declaraciones de variables, escribe el tipo y llama al resto de vars de ese mismo tipo
 ctelist :  | ',' IDENT '=' simpvalue {p.dcls.add("#define " + $IDENT.text + " "+ $simpvalue.val);} ctelist;
 //Añade todos los #define del tipo anterior (en dcl)
-simpvalue returns [String val]: NUM_INT_CONST {$val = $NUM_INT_CONST.text;}| NUM_REAL_CONST {$val = $NUM_REAL_CONST.text;}| STRING_CONST {$val = $STRING_CONST.text;};
-tipo returns [String s] : 'INTEGER' {$s = "int";} | 'REAL' {$s = "float";} | 'CHARACTER' {$s = "char";} charlength {$s += "["+$charlength.len+"]";} ;
+simpvalue returns [String val]: NUM_INT_CONST {$val = $NUM_INT_CONST.text;}| NUM_REAL_CONST {$val = $NUM_REAL_CONST.text;}| STRING_CONST {$val = "\""+Utils.unescapeString($STRING_CONST.text)+"\"";};
+tipo returns [Type type] : 'INTEGER' {$type = new Type("int");} | 'REAL' {$type = new Type("float");} | 'CHARACTER' charlength {$type = new Type("char", $charlength.len);} ;
 charlength returns [int len] :  | '(' NUM_INT_CONST {$len = Integer.parseInt($NUM_INT_CONST.text);} ')';
-varlist : IDENT {p.vars.add($IDENT.text);} init varlist_p; //Añade a las vars la primera del tipo anterior y llama a las siguientes
-varlist_p : | ',' IDENT {p.vars.add(", " + $IDENT.text);} init varlist_p; //Añade la siguiente variable y continúa llamando a las siguientes
-init :  | '=' simpvalue {p.vars.add(" = " + $simpvalue.val);}; //Da valor inicial a las variables que lo tengan
+varlist[GlobalVariables vars_h] returns [GlobalVariables vars_s] : IDENT {$vars_h.currentName = $IDENT.text;} init[$vars_h] {$vars_h.addCurrentVar();} varlist_p[$vars_h] {$vars_s = $vars_h;}; //Añade a las vars la primera del tipo anterior y llama a las siguientes
+varlist_p[GlobalVariables vars_h] : | ',' IDENT {$vars_h.currentName = $IDENT.text;} init[$vars_h] {$vars_h.addCurrentVar();} varlist_p[$vars_h]; //Añade la siguiente variable y continúa llamando a las siguientes
+init[GlobalVariables vars_h] : | '=' simpvalue {$vars_h.currentValue = $simpvalue.val;}; //Da valor inicial a las variables que lo tengan
 
 
 // Syntax for subroutines
-decproc : 'SUBROUTINE' procName=IDENT formal_paramlist dec_s_paramlist[new ArrayList<Pair<String, String>>()] 'END' 'SUBROUTINE' procNameEnd=IDENT {p.functions.put($procName.text, new Function("void", $procName.text, $dec_s_paramlist.params_s));};
+decproc : 'SUBROUTINE' procName=IDENT formal_paramlist dec_s_paramlist[new ArrayList<Pair<Type, String>>()] 'END' 'SUBROUTINE' procNameEnd=IDENT {p.functions.put($procName.text, new Function(new Type("void"), $procName.text, $dec_s_paramlist.params_s));};
 formal_paramlist :  | '(' nomparamlist ')';
 nomparamlist : IDENT nomparamlist_p;
 nomparamlist_p : | ',' nomparamlist;
-dec_s_paramlist[List<Pair<String, String>> params_h] returns [List<Pair<String, String>> params_s] : {$params_s = $params_h;} | tipo ',' 'INTENT' '(' tipoparam ')' IDENT ';' dec_s_paramlist[$params_h] {$params_s = $dec_s_paramlist.params_s; $params_s.add(0, new Pair<String, String>($tipo.s, $IDENT.text));};
+dec_s_paramlist[List<Pair<Type, String>> params_h] returns [List<Pair<Type, String>> params_s] : {$params_s = $params_h;} | tipo ',' 'INTENT' '(' tipoparam ')' IDENT ';' dec_s_paramlist[$params_h] {$params_s = $dec_s_paramlist.params_s; $params_s.add(0, new Pair<Type, String>($tipo.type, $IDENT.text));};
 tipoparam : 'IN' | 'OUT' | 'INOUT';
-decfun : 'FUNCTION' funcName=IDENT '(' nomparamlist ')' tipo '::' funcNameType=IDENT ';' dec_f_paramlist[new ArrayList<Pair<String, String>>()] 'END' 'FUNCTION' funcNameEnd=IDENT {p.functions.put($funcName.text, new Function($tipo.s, $funcName.text, $dec_f_paramlist.params_s));};
-dec_f_paramlist[List<Pair<String, String>> params_h] returns [List<Pair<String, String>> params_s] : {$params_s = $params_h;} | tipo ',' 'INTENT' '(' 'IN' ')' IDENT ';' dec_f_paramlist[$params_h] {$params_s = $dec_f_paramlist.params_s; $params_s.add(0, new Pair<String, String>($tipo.s, $IDENT.text));};
+decfun : 'FUNCTION' funcName=IDENT '(' nomparamlist ')' tipo '::' funcNameType=IDENT ';' dec_f_paramlist[new ArrayList<Pair<Type, String>>()] 'END' 'FUNCTION' funcNameEnd=IDENT {p.functions.put($funcName.text, new Function($tipo.type, $funcName.text, $dec_f_paramlist.params_s));};
+dec_f_paramlist[List<Pair<Type, String>> params_h] returns [List<Pair<Type, String>> params_s] : {$params_s = $params_h;} | tipo ',' 'INTENT' '(' 'IN' ')' IDENT ';' dec_f_paramlist[$params_h] {$params_s = $dec_f_paramlist.params_s; $params_s.add(0, new Pair<Type, String>($tipo.type, $IDENT.text));};
 
 
 
@@ -88,9 +88,9 @@ dec_f_paramlist[List<Pair<String, String>> params_h] returns [List<Pair<String, 
 sent returns [String s]: IDENT '=' exp ';' {$s = $IDENT.text + " = " + $exp.val + ";\n";}| proc_call ';' {$s = $proc_call.val + ";\n";};
 exp returns [String val]: factor exp_p {$val = $factor.val + " " + $exp_p.val;};
 exp_p returns [String val]: op exp exp_p  {$val = $op.val + " " + $exp.val + " " + $exp_p.val;} | {$val = "";};
-op returns [String val]: '+' {$val = '+';} | '-' {$val = '-';} | '*' {$val = '*';} | '/' {$val = '/';};
-factor returns [String val]: simpvalue {$val = $simpvalue.val;} | '(' exp ')' {$val = '(' + $exp.val + ')';} | IDENT subpparamlist {$val = $IDENT.text + " " + $subpparamlist.val};
-explist returns [String val]: ',' exp expl1=explist {$val = ", " + $exp.val + expl1.val;}| {$val = "";};
+op returns [String val]: '+' {$val = "+";} | '-' {$val = "-";} | '*' {$val = "*";} | '/' {$val = "/";};
+factor returns [String val]: simpvalue {$val = $simpvalue.val;} | '(' exp ')' {$val = '(' + $exp.val + ')';} | IDENT subpparamlist {$val = $IDENT.text + " " + $subpparamlist.val;};
+explist returns [String val]: ',' exp expl1=explist {$val = ", " + $exp.val + $expl1.val;}| {$val = "";};
 proc_call returns [String val]: 'CALL' IDENT subpparamlist {$val = $IDENT.text + $subpparamlist.val;};
 subpparamlist returns [String val]: '(' exp explist ')' {$val = '(' + $exp.val + $explist.val;} | {$val = "";};
 
@@ -103,12 +103,12 @@ codfun : 'FUNCTION' IDENT '(' nomparamlist ')' tipo '::' IDENT ';' z1 sentlist I
     'END' 'FUNCTION' IDENT;
 
 
-y1 : | tipo y2;
-y2 : ',' y3 | '::' varlist ';' dcllist;
+y1 : | tipo y2[$tipo.type];
+y2[Type type] : ',' y3 | '::' varlist[new GlobalVariables($type)] ';' dcllist;
 y3 : 'INTENT' '(' tipoparam ')' IDENT ';' y1 | 'PARAMETER' '::' IDENT '=' simpvalue ctelist ';' dcllist;
 
-z1 : | tipo z2;
-z2 : ',' z3 | '::' varlist ';' dcllist;
+z1 : | tipo z2[$tipo.type];
+z2[Type type] : ',' z3 | '::' varlist[new GlobalVariables($type)] ';' dcllist;
 z3 : 'INTENT' '(' 'IN' ')' IDENT ';' z1 | 'PARAMETER' '::' IDENT '=' simpvalue ctelist ';' dcllist;
 
 

@@ -1,6 +1,7 @@
 PROGRAM prog1 ;
 INTEGER, PARAMETER :: max_val = 100, min_val = -50;
 REAL, PARAMETER :: pi = 3.1415, e = 2.71828, c = 2e-6;
+CHARACTER(10), PARAMETER :: texto = 'a " b '' c', texto2 = "d "" e ' f";
 
 INTEGER :: contador = 0, acumulador;
 REAL :: promedio, total = 0.0;

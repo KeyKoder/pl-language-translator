@@ -1,7 +1,7 @@
 grammar Scientific;
 
 @members {
-    Program p;
+    translation.Program p;
 }
 
 
@@ -73,7 +73,7 @@ dcl [translation.Type type]: ',' 'PARAMETER' '::' IDENT '=' simpvalue {p.dcls.ad
 //2: Hace las declaraciones de variables, escribe el tipo y llama al resto de vars de ese mismo tipo
 ctelist :  | ',' IDENT '=' simpvalue {p.dcls.add("#define " + $IDENT.text + " "+ $simpvalue.val);} ctelist;
 //Añade todos los #define del tipo anterior (en dcl)
-simpvalue returns [String val]: NUM_INT_CONST {$val = $NUM_INT_CONST.text;} | NUM_REAL_CONST {$val = $NUM_REAL_CONST.text;} | STRING_CONST {$val = "\""+Utils.unescapeString($STRING_CONST.text)+"\"";} | NUM_INT_CONST_B | NUM_INT_CONST_O | NUM_INT_CONST_H; //TODO tiene nuevas
+simpvalue returns [String val]: NUM_INT_CONST {$val = $NUM_INT_CONST.text;} | NUM_REAL_CONST {$val = $NUM_REAL_CONST.text;} | STRING_CONST {$val = Utils.fixString($STRING_CONST.text);} | NUM_INT_CONST_B | NUM_INT_CONST_O | NUM_INT_CONST_H; //TODO tiene nuevas
 tipo returns [translation.Type type] : 'INTEGER' {$type = new translation.Type("int");} | 'REAL' {$type = new translation.Type("float");} | 'CHARACTER' charlength {$type = new translation.Type("char", $charlength.len);} ;
 charlength returns [int len] : {$len = -1;} | '(' NUM_INT_CONST {$len = Integer.parseInt($NUM_INT_CONST.text);} ')';
 varlist[translation.Variables vars_h] returns [translation.Variables vars_s] : IDENT {$vars_h.currentName = $IDENT.text;} init[$vars_h] {$vars_h.addCurrentVar();} varlist_p[$vars_h] {$vars_s = $vars_h;}; //Añade a las vars la primera del tipo anterior y llama a las siguientes

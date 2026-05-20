@@ -1,7 +1,7 @@
 grammar Scientific;
 
 @members {
-    translation.Program p;
+    Program p;
 }
 
 
@@ -31,6 +31,13 @@ NUM_EXP_CONST : '-'? DIGIT+ [eE] '-'? DIGIT+;
 
 NUM_MIXED_CONST : '-'? DIGIT+ '.' DIGIT+ [eE] '-'? DIGIT+;
 
+//Parte opcional
+NUM_INT_CONST_B : 'b' '\''[01]+'\'' {setText("0b" + getText().substring(2, getText().length() - 1));};
+NUM_INT_CONST_O : 'o' '\''[0-7]+'\'' {setText("0o" + getText().substring(2, getText().length() - 1));};
+NUM_INT_CONST_H : 'z' '\''[0-9A-F]+'\'' {setText("0x" + getText().substring(2, getText().length() - 1));};
+
+CTE_LOGICA : '.TRUE.' {setText("1");} | '.FALSE.' {setText("0");};
+//Fin de la parte opcional
 
 COMMENTS : '!' PLAINTEXT NL;
 
@@ -66,7 +73,7 @@ dcl [translation.Type type]: ',' 'PARAMETER' '::' IDENT '=' simpvalue {p.dcls.ad
 //2: Hace las declaraciones de variables, escribe el tipo y llama al resto de vars de ese mismo tipo
 ctelist :  | ',' IDENT '=' simpvalue {p.dcls.add("#define " + $IDENT.text + " "+ $simpvalue.val);} ctelist;
 //Añade todos los #define del tipo anterior (en dcl)
-simpvalue returns [String val]: NUM_INT_CONST {$val = $NUM_INT_CONST.text;}| NUM_REAL_CONST {$val = $NUM_REAL_CONST.text;}| STRING_CONST {$val = "\""+Utils.unescapeString($STRING_CONST.text)+"\"";};
+simpvalue returns [String val]: NUM_INT_CONST {$val = $NUM_INT_CONST.text;} | NUM_REAL_CONST {$val = $NUM_REAL_CONST.text;} | STRING_CONST {$val = "\""+Utils.unescapeString($STRING_CONST.text)+"\"";} | NUM_INT_CONST_B | NUM_INT_CONST_O | NUM_INT_CONST_H; //TODO tiene nuevas
 tipo returns [translation.Type type] : 'INTEGER' {$type = new translation.Type("int");} | 'REAL' {$type = new translation.Type("float");} | 'CHARACTER' charlength {$type = new translation.Type("char", $charlength.len);} ;
 charlength returns [int len] : {$len = -1;} | '(' NUM_INT_CONST {$len = Integer.parseInt($NUM_INT_CONST.text);} ')';
 varlist[translation.Variables vars_h] returns [translation.Variables vars_s] : IDENT {$vars_h.currentName = $IDENT.text;} init[$vars_h] {$vars_h.addCurrentVar();} varlist_p[$vars_h] {$vars_s = $vars_h;}; //Añade a las vars la primera del tipo anterior y llama a las siguientes
@@ -88,7 +95,7 @@ dec_f_paramlist[List<Pair<translation.Type, String>> params_h] returns [List<Pai
 
 //Syntax for assignations (TODO: Creo que está terminado, revisar)
 //Cada línea añade lo que tiene, y el formato de cada tipo de sentencia se pone bien en cada uno (espacios, saltos de línea, etc)
-sent returns [String s]: IDENT '=' exp ';' {$s = $IDENT.text + " = " + $exp.val + ";\n";}| proc_call ';' {$s = $proc_call.val + ";\n";};
+sent returns [String s]: IDENT '=' exp ';' {$s = $IDENT.text + " = " + $exp.val + ";\n";}| proc_call ';' {$s = $proc_call.val + ";\n";} | 'IF' '(' expcond ')' sent_if | 'DO' sent_do | 'SELECT' 'CASE' '(' exp ')' casos 'END' 'SELECT';//TODO tiene nuevas
 exp returns [String val]: factor exp_p {$val = $factor.val + " " + $exp_p.val;};
 exp_p returns [String val]: op exp exp_p  {$val = $op.val + " " + $exp.val + " " + $exp_p.val;} | {$val = "";};
 op returns [String val]: '+' {$val = "+";} | '-' {$val = "-";} | '*' {$val = "*";} | '/' {$val = "/";};
@@ -96,6 +103,24 @@ factor returns [String val]: simpvalue {$val = $simpvalue.val;} | '(' exp ')' {$
 explist returns [String val]: ',' exp expl1=explist {$val = ", " + $exp.val + $expl1.val;}| {$val = "";};
 proc_call returns [String val]: 'CALL' IDENT subpparamlist {$val = $IDENT.text + $subpparamlist.val;};
 subpparamlist returns [String val]: '(' exp explist ')' {$val = '(' + $exp.val + $explist.val;} | {$val = "";};
+
+
+//Syntax for flux control
+sent_if : sent | 'THEN' sentlist sent_if_p;
+sent_if_p : 'ENDIF' | 'ELSE' sentlist 'ENDIF';
+sent_do : 'WHILE' '(' expcond ')' sentlist 'ENDDO' | IDENT '=' doval ',' doval ',' doval sentlist 'ENDDO';
+doval : NUM_INT_CONST | IDENT;
+casos : | 'CASE' caso_p;
+caso_p : '(' etiquetas ')' sentlist casos | 'DEFAULT' sentlist;
+etiquetas : simpvalue etiqueta_p | ':' simpvalue;
+etiqueta_p : listaetiquetas | ':' etiqueta_secundaria;
+etiqueta_secundaria : | simpvalue;
+listaetiquetas : | ',' simpvalue listaetiquetas;
+expcond : factorcond expcond_p;
+expcond_p : | oplog factorcond expcond_p;
+oplog : '.OR.' | '.AND.' | '.EQV.' | '.NEQV.';
+factorcond : exp opcomp exp | '(' expcond ')' | '.NOT.' factorcond | '.TRUE.' | '.FALSE.';
+opcomp : '<' | '>' | '<=' | '>=' | '==' | '/=';
 
 
 

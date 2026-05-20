@@ -36,7 +36,6 @@ NUM_INT_CONST_B : 'b' '\''[01]+'\'' {setText("0b" + getText().substring(2, getTe
 NUM_INT_CONST_O : 'o' '\''[0-7]+'\'' {setText("0o" + getText().substring(2, getText().length() - 1));};
 NUM_INT_CONST_H : 'z' '\''[0-9A-F]+'\'' {setText("0x" + getText().substring(2, getText().length() - 1));};
 
-CTE_LOGICA : '.TRUE.' {setText("1");} | '.FALSE.' {setText("0");};
 //Fin de la parte opcional
 
 COMMENTS : '!' PLAINTEXT NL;
@@ -67,13 +66,13 @@ sentlist returns [String lista]: sent sentlist_p {$lista = $sent.s + $sentlist_p
 sentlist_p returns [String lista_p]: {$lista_p = "";}| sent sl2=sentlist_p {$lista_p = $sent.s + $sl2.lista_p;};
 
 // Syntax declarations (TODO: Creo que está terminado, revisar)
-dcl [translation.Type type]: ',' 'PARAMETER' '::' IDENT '=' simpvalue {p.dcls.add("#define "+$IDENT.text+" "+$simpvalue.val);} ctelist ';' dcllist | '::' varlist[new translation.Variables($type)] {p.vars.add($varlist.vars_s);} ';' dcllist;
+dcl [translation.Type type]: ',' 'PARAMETER' '::' IDENT '=' simpvalue {p.dcls.add("#define "+ $IDENT.text + " " + $simpvalue.val);} ctelist ';' dcllist | '::' varlist[new translation.Variables($type)] {p.vars.add($varlist.vars_s);} ';' dcllist;
 //TODO: he creado un nuevo atributo p.vars porque todos los #define tienen que ir seguidos al final, pero la gramática permite que estén intercalados con las declaraciones de variables, así que hay que guardarlos en sitios distintos para conservar ese orden
 //1: Hace el primer #define id xxx; y llama a laos demás del mismo tipo y al terminar al resto de constantes
 //2: Hace las declaraciones de variables, escribe el tipo y llama al resto de vars de ese mismo tipo
 ctelist :  | ',' IDENT '=' simpvalue {p.dcls.add("#define " + $IDENT.text + " "+ $simpvalue.val);} ctelist;
 //Añade todos los #define del tipo anterior (en dcl)
-simpvalue returns [String val]: NUM_INT_CONST {$val = $NUM_INT_CONST.text;} | NUM_REAL_CONST {$val = $NUM_REAL_CONST.text;} | STRING_CONST {$val = Utils.fixString($STRING_CONST.text);} | NUM_INT_CONST_B | NUM_INT_CONST_O | NUM_INT_CONST_H; //TODO tiene nuevas
+simpvalue returns [String val]: NUM_INT_CONST {$val = $NUM_INT_CONST.text;} | NUM_REAL_CONST {$val = $NUM_REAL_CONST.text;} | STRING_CONST {$val = Utils.fixString($STRING_CONST.text);} | NUM_INT_CONST_B {$val = $NUM_INT_CONST_B.text;} | NUM_INT_CONST_O {$val = $NUM_INT_CONST_O.text;} | NUM_INT_CONST_H {$val = $NUM_INT_CONST_H.text;};
 tipo returns [translation.Type type] : 'INTEGER' {$type = new translation.Type("int");} | 'REAL' {$type = new translation.Type("float");} | 'CHARACTER' charlength {$type = new translation.Type("char", $charlength.len);} ;
 charlength returns [int len] : {$len = -1;} | '(' NUM_INT_CONST {$len = Integer.parseInt($NUM_INT_CONST.text);} ')';
 varlist[translation.Variables vars_h] returns [translation.Variables vars_s] : IDENT {$vars_h.currentName = $IDENT.text;} init[$vars_h] {$vars_h.addCurrentVar();} varlist_p[$vars_h] {$vars_s = $vars_h;}; //Añade a las vars la primera del tipo anterior y llama a las siguientes
@@ -87,7 +86,7 @@ formal_paramlist :  | '(' nomparamlist ')';
 nomparamlist : IDENT nomparamlist_p;
 nomparamlist_p : | ',' nomparamlist;
 dec_s_paramlist[List<Pair<translation.Type, String>> params_h] returns [List<Pair<translation.Type, String>> params_s] : {$params_s = $params_h;} | tipo ',' 'INTENT' '(' tipoparam ')' IDENT ';' dec_s_paramlist[$params_h] {$params_s = $dec_s_paramlist.params_s; $params_s.add(0, new Pair<translation.Type, String>($tipo.type, $IDENT.text));};
-tipoparam : 'IN' | 'OUT' | 'INOUT';
+tipoparam returns [String val]: 'IN' {$val = "IN";} | 'OUT' {$val = "OUT";} | 'INOUT' {$val = "INOUT";}; //todo Esto es para los punteros (si nos da tiempo que no creo)
 decfun : 'FUNCTION' funcName=IDENT '(' nomparamlist ')' tipo '::' funcNameType=IDENT ';' dec_f_paramlist[new ArrayList<Pair<translation.Type, String>>()] 'END' 'FUNCTION' funcNameEnd=IDENT {p.functions.put($funcName.text, new translation.Function($tipo.type, $funcName.text, $dec_f_paramlist.params_s));};
 dec_f_paramlist[List<Pair<translation.Type, String>> params_h] returns [List<Pair<translation.Type, String>> params_s] : {$params_s = $params_h;} | tipo ',' 'INTENT' '(' 'IN' ')' IDENT ';' dec_f_paramlist[$params_h] {$params_s = $dec_f_paramlist.params_s; $params_s.add(0, new Pair<translation.Type, String>($tipo.type, $IDENT.text));};
 
@@ -95,7 +94,8 @@ dec_f_paramlist[List<Pair<translation.Type, String>> params_h] returns [List<Pai
 
 //Syntax for assignations (TODO: Creo que está terminado, revisar)
 //Cada línea añade lo que tiene, y el formato de cada tipo de sentencia se pone bien en cada uno (espacios, saltos de línea, etc)
-sent returns [String s]: IDENT '=' exp ';' {$s = $IDENT.text + " = " + $exp.val + ";\n";}| proc_call ';' {$s = $proc_call.val + ";\n";} | 'IF' '(' expcond ')' sent_if | 'DO' sent_do | 'SELECT' 'CASE' '(' exp ')' casos 'END' 'SELECT';//TODO tiene nuevas
+sent returns [String s]: IDENT '=' exp ';' {$s = $IDENT.text + " = " + $exp.val + ";\n";}| proc_call ';' {$s = $proc_call.val + ";\n";} | 'IF' '(' expcond ')' sent_if[$expcond.val] {$s = $sent_if.val;} | 'DO' sent_do {$s = $sent_do.val;} |
+    'SELECT' 'CASE' '(' exp ')' casos 'END' 'SELECT' {$s = "switch (" + $exp.val + ") {\n" + $casos.val + "}\n";};
 exp returns [String val]: factor exp_p {$val = $factor.val + " " + $exp_p.val;};
 exp_p returns [String val]: op exp exp_p  {$val = $op.val + " " + $exp.val + " " + $exp_p.val;} | {$val = "";};
 op returns [String val]: '+' {$val = "+";} | '-' {$val = "-";} | '*' {$val = "*";} | '/' {$val = "/";};
@@ -105,22 +105,23 @@ proc_call returns [String val]: 'CALL' IDENT subpparamlist {$val = $IDENT.text +
 subpparamlist returns [String val]: '(' exp explist ')' {$val = '(' + $exp.val + $explist.val;} | {$val = "";};
 
 
-//Syntax for flux control
-sent_if : sent | 'THEN' sentlist sent_if_p;
-sent_if_p : 'ENDIF' | 'ELSE' sentlist 'ENDIF';
-sent_do : 'WHILE' '(' expcond ')' sentlist 'ENDDO' | IDENT '=' doval ',' doval ',' doval sentlist 'ENDDO';
-doval : NUM_INT_CONST | IDENT;
-casos : | 'CASE' caso_p;
-caso_p : '(' etiquetas ')' sentlist casos | 'DEFAULT' sentlist;
-etiquetas : simpvalue etiqueta_p | ':' simpvalue;
-etiqueta_p : listaetiquetas | ':' etiqueta_secundaria;
-etiqueta_secundaria : | simpvalue;
-listaetiquetas : | ',' simpvalue listaetiquetas;
-expcond : factorcond expcond_p;
-expcond_p : | oplog factorcond expcond_p;
-oplog : '.OR.' | '.AND.' | '.EQV.' | '.NEQV.';
-factorcond : exp opcomp exp | '(' expcond ')' | '.NOT.' factorcond | '.TRUE.' | '.FALSE.';
-opcomp : '<' | '>' | '<=' | '>=' | '==' | '/=';
+//Syntax for flux control TODO falta meterlo en los objetos, pero la logica ya esta hecha
+sent_if [String cond] returns [String val]: sent {$val = "if (" + $cond + ") {\n\t" + $sent.s + "}\n";} | 'THEN' sentlist sent_if_p {$val = "if (" + $cond + ") {\n" + $sentlist.lista + "}\n" + $sent_if_p.val;};
+sent_if_p returns [String val]: 'ENDIF' {$val = ""}| 'ELSE' sentlist 'ENDIF' {$val = "else {\n" + $sentlist.lista + "}\n";};
+sent_do returns [String val]: 'WHILE' '(' expcond ')' sentlist 'ENDDO' {$val = "while (" + $expcond.val + ") {\n" + $sentlist.lista + "}\n";} | IDENT '=' d1=doval ',' d2=doval ',' d3=doval sentlist 'ENDDO' {$val = "for (" + $IDENT.text + "=" + $d1.val + "; " + $IDENT.text + "!=" + $d2.val + "; " + $IDENT.text + "=" + $IDENT.text + "+" + $d3.val + ") {\n" + $sentlist.lista + "}\n";};
+doval returns [String val]: NUM_INT_CONST {$val = $NUM_INT_CONST} | IDENT {$val = $IDENT};
+casos returns [String val]: {$val = ""} | 'CASE' caso_p {$val = $caso_p.val;};
+caso_p returns [String val]: '(' etiquetas ')' sentlist casos {$val = $etiquetas.val + "\n" + $sentlist.lista + "break;\n" + $casos.val;} | 'DEFAULT' sentlist {$val = "default:\n" + $sentlist.lista + "break;\n";};
+etiquetas returns [String val]: simpvalue etiqueta_p[$simpvalue.val] {$val = $etiqueta_p.val;} | ':' simpvalue {$val = "case < " + $simpvalue.val + " :";};
+etiqueta_p [String baseVal] returns [String val]: listaetiquetas {if ($listaetiquetas.val.isEmpty()) $val = "case " + $baseVal + " :"; else $val = "case " + $baseVal + " :\n" + $listaetiquetas.val;} |
+    ':' etiqueta_secundaria {if ($etiqueta_secundaria.val.isEmpty()) $val = "case > " + $baseVal + " :\n"; else $val = "case " + $baseVal + " to " + $etiqueta_secundaria.val + ":\n";};
+etiqueta_secundaria returns [String val]: {$val = "";} | simpvalue {$val = $simpvalue.val;};
+listaetiquetas returns [String val]: {$val = "";} | ',' simpvalue l1=listaetiquetas {$val = "case " + $simpvalue.val + ":\n" + $l1.val;};
+expcond returns [String val]: factorcond expcond_p {$val = $factorcond.val + $expcond_p.val;};
+expcond_p returns [String val]: {$val = "";} | oplog factorcond e1=expcond_p {$val = " " + $oplog.val + " " + $factorcond.val + $e1.val;};
+oplog returns [String val]: '.OR.' {$val = "||";} | '.AND.' {$val = "&&";} | '.EQV.' {$val = "!^";} | '.NEQV.' {$val = "^";};
+factorcond returns [String val]: e1=exp opcomp e2=exp {$val = $e1.val + " " + $opcomp.val + " " + $e2.val;} | '(' expcond ')' {$val = "(" + $expcond.val + ")";} | '.NOT.' f1=factorcond {$val = "!" + $f1.val;} | '.TRUE.' {$val = "1";} | '.FALSE.' {$val = "0";};
+opcomp returns [String val]: '<' {$val = "<";} | '>' {$val = ">";} | '<=' {$val = "<=";} | '>=' {$val = ">=";} | '==' {$val = "==";} | '/=' {$val = "!=";};
 
 
 

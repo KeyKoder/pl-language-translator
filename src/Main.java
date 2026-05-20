@@ -1,8 +1,15 @@
 import org.antlr.v4.runtime.CharStream;
 import org.antlr.v4.runtime.CharStreams;
 import org.antlr.v4.runtime.CommonTokenStream;
+import org.antlr.v4.runtime.misc.Pair;
+import translation.Function;
+import translation.Type;
+import translation.Variables;
+import translation.statements.*;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 
 /*
 El nombre ClasePrincipal es arbitrario, escoge el que prefieras.
@@ -46,5 +53,42 @@ public class Main {
 			//Cualquier otro fallo
 			System.err.println("RUN " + e.getMessage());
 		}
+
+
+		/*
+		Small example of how a function is created (to serve as reference)
+	 	Original code would be something like:
+
+		FUNCTION foo(myFloat, longText)
+			INTEGER :: foo;
+			REAL, INTENT(IN) myFloat;
+			CHARACTER(30), INTENT(IN) longText;
+
+			INTEGER :: bar = 3, baz = 77;
+			foo = (bar * 2 - baz) / myFloat;
+		END FUNCTION foo
+
+
+		Resulting java code (plus a print at the beginning and end in case we wanna run it for testing).
+
+
+		System.out.println("-".repeat(10) + " TESTING " + "-".repeat(10));
+
+		List<Pair<Type, String>> params = new ArrayList<Pair<Type, String>>();
+		params.add(new Pair<Type, String>(new Type("float"), "myFloat"));
+		params.add(new Pair<Type, String>(new Type("char", 30), "longText"));
+		Function f = new Function(new Type("int"), "foo", params);
+
+		Variables vars = new Variables(new Type("int"), "bar", "3");
+		vars.addCurrentVar();
+		vars.currentName = "baz";
+		vars.currentValue = "77";
+		vars.addCurrentVar();
+
+		f.code.statements.add(new VarDeclarationStatement(vars));
+		f.code.statements.add(new AssignStatement("foo", new ExprStatement("(bar * 2 - baz) / myFloat"))); // this will be converted to a return statement by the function's toString
+
+		System.out.println(f.toString());
+		 */
 	}
 }

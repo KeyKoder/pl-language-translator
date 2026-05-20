@@ -1,3 +1,5 @@
+package translation;
+
 public class Type {
 	public String typename;
 	// si count >= 0 -> representa un array de longitud count

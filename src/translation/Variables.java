@@ -1,9 +1,11 @@
+package translation;
+
 import org.antlr.v4.runtime.misc.Pair;
 
 import java.util.ArrayList;
 import java.util.List;
 
-public class GlobalVariables {
+public class Variables {
 	public Type type;
 	// list of pairs (name, value)
 	// if value is null, then no initial value is set
@@ -12,28 +14,28 @@ public class GlobalVariables {
 	public String currentValue;
 
 
-	public GlobalVariables(Type type) {
+	public Variables(Type type) {
 		this.type = type;
 		this.currentName = null;
 		this.currentValue = null;
 	}
 
-	public GlobalVariables(String name) {
+	public Variables(String startingName) {
 		this.type = null;
-		this.currentName = name;
+		this.currentName = startingName;
 		this.currentValue = null;
 	}
 
-	public GlobalVariables(Type type, String name) {
+	public Variables(Type type, String startingName) {
 		this.type = type;
-		this.currentName = name;
+		this.currentName = startingName;
 		this.currentValue = null;
 	}
 
-	public GlobalVariables(Type type, String name, String value) {
+	public Variables(Type type, String startingName, String startingValue) {
 		this.type = type;
-		this.currentName = name;
-		this.currentValue = value;
+		this.currentName = startingName;
+		this.currentValue = startingValue;
 	}
 
 	public void addCurrentVar() {

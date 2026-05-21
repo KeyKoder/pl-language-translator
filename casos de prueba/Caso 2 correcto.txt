@@ -1,0 +1,9 @@
+PROGRAM cond ;
+INTEGER :: x = 5 ;
+INTEGER :: y = 10 ;
+IF ( (x < y) .AND. .TRUE. ) THEN
+    x = x + 1 ;
+ELSE
+    y = y - 1 ;
+ENDIF
+END PROGRAM cond

@@ -1,0 +1,12 @@
+PROGRAM sub ;
+INTERFACE
+    SUBROUTINE printVal ( x )
+        INTEGER, INTENT(IN) x ;
+    END SUBROUTINE printVal
+END INTERFACE
+CALL printVal(5) ;
+END PROGRAM sub
+SUBROUTINE printVal ( x )
+    INTEGER, INTENT(IN) x ;
+    x = x + 1 ;
+END SUBROUTINE printVal

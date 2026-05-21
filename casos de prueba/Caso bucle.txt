@@ -1,0 +1,7 @@
+PROGRAM bucle1 ;
+INTEGER :: i ;
+INTEGER :: sum = 0 ;
+DO i = 1, 10, 1
+    sum = sum + i ;
+ENDDO
+END PROGRAM bucle1

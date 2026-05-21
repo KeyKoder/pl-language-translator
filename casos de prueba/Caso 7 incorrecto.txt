@@ -1,0 +1,4 @@
+PROGRAM err3 ;
+INTEGER :: x = 5 ;
+x = 5 + * 3 ;
+END PROGRAM err3

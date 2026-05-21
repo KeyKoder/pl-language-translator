@@ -1,0 +1,7 @@
+PROGRAM err_bucle ;
+INTEGER :: i ;
+INTEGER :: sum = 0 ;
+DO i = 1, 10
+    sum = sum + i ;
+ENDDO
+END PROGRAM err_bucle

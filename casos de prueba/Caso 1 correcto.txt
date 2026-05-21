@@ -1,0 +1,6 @@
+PROGRAM main ;
+INTEGER, PARAMETER :: max = z'FF' ;
+INTEGER :: a, b = b'1010' ;
+REAL :: pi = 3.14 ;
+a = o'77' ;
+END PROGRAM main

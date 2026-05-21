@@ -1,0 +1,5 @@
+PROGRAM err1 ;
+INTEGER :: x = 1 ;
+x = 5 ;
+INTEGER :: y = 2 ;
+END PROGRAM err1

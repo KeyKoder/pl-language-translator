@@ -1,0 +1,11 @@
+PROGRAM sel ;
+INTEGER :: x = 2 ;
+SELECT CASE ( x )
+CASE ( 1 )
+    x = 10 ;
+CASE ( 2 : 5 )
+    x = 20 ;
+CASE DEFAULT
+    x = 0 ;
+END SELECT
+END PROGRAM sel

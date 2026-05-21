@@ -18,4 +18,11 @@ public class Utils {
 		}
 		return "\"" + output + "\"";
 	}
+
+	public static String fixBasedIntLiteral(String literal) {
+		String output = literal;
+		if(output.charAt(0) == 'z') output = 'x' + output.substring(1);
+		output = output.replaceAll("'", "");
+		return "0" + output;
+	}
 }

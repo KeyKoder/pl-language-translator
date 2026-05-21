@@ -7,6 +7,10 @@ INTEGER :: contador = 0, acumulador;
 REAL :: promedio, total = 0.0;
 CHARACTER(10) :: mensaje1 = 'Hola', mensaje2 = 'Mundo';
 
+INTEGER :: myBin = b'01101', myOct = o'727';
+INTEGER :: myHex = z'C0FFEE';
+
+! test
 
 INTEGER :: var1, var2 = 24;
 REAL :: var3;

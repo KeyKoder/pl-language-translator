@@ -1,5 +1,9 @@
 grammar Scientific;
 
+@header {
+    import translation.statements.switchcase.CaseBlock;
+}
+
 /*
    RAZONAMIENTO SOBRE POR QUE UTILIZAMOS @members
    Podríamos haber ido pasando blockDepth hacia abajo partiendo desde sentlist hasta las producciones/reglas
@@ -110,8 +114,8 @@ dec_f_paramlist[List<Pair<translation.Type, String>> params_h] returns [List<Pai
 //Syntax for assignations
 //Cada línea añade lo que tiene, y el formato de cada tipo de sentencia se pone bien en cada uno (espacios, saltos de línea, etc)
 sent returns [translation.statements.Statement statement]: IDENT '=' exp ';' {$statement = new translation.statements.AssignStatement($IDENT.text, $exp.statement);}| proc_call ';' {$statement = $proc_call.statement;} |
-    'IF' '(' expcond ')' sent_if[$expcond.statement] {$statement = $sent_if.statement_s;}; // | 'DO' sent_do {$statement = $sent_do.val;} |
-//    'SELECT' 'CASE' '(' exp ')' casos 'END' 'SELECT' {$statement = "switch (" + $exp.statement + ") {\n" + $casos.val + "}\n";};
+    'IF' '(' expcond ')' sent_if[$expcond.statement] {$statement = $sent_if.statement_s;} | // | 'DO' sent_do {$statement = $sent_do.val;} |
+    'SELECT' 'CASE' '(' exp ')' casos[new ArrayList<translation.statements.switchcase.CaseBlock>()] 'END' 'SELECT' {$statement = new translation.statements.CaseStatement($exp.statement, $casos.cases_s);};
 exp returns [translation.statements.ExprStatement statement] : factor {$statement = new translation.statements.ExprStatement(); $statement.left = $factor.statement;} exp_p[$statement];
 exp_p[translation.statements.ExprStatement statement_h] returns [translation.statements.ExprStatement statement_s]: {$statement_s = $statement_h;} op {$statement_s.operator = $op.val;} exp {$statement_s.right = $exp.statement;} exp_p[$statement_s] | {$statement_s = $statement_h;};
 op returns [String val]: '+' {$val = "+";} | '-' {$val = "-";} | '*' {$val = "*";} | '/' {$val = "/";};
@@ -126,13 +130,16 @@ sent_if [translation.statements.ExprStatement cond] returns [translation.stateme
 sent_if_p [translation.statements.IfStatement statement_h] returns [translation.statements.IfStatement statement_s] : 'ENDIF' {$statement_s = $statement_h; blockDepth--;} | {$statement_s = $statement_h; blockDepth--;} 'ELSE' sentlist[$statement_s.elseCode] 'ENDIF' {blockDepth--;};
 //sent_do returns [String val]: 'WHILE' '(' expcond ')' sentlist[null] 'ENDDO' {$val = "while (" + $expcond.val + ") {\n" + $sentlist.lista + "}\n";} | IDENT '=' d1=doval ',' d2=doval ',' d3=doval sentlist[null] 'ENDDO' {$val = "for (" + $IDENT.text + "=" + $d1.val + "; " + $IDENT.text + "!=" + $d2.val + "; " + $IDENT.text + "=" + $IDENT.text + "+" + $d3.val + ") {\n" + $sentlist.lista + "}\n";};
 //doval returns [String val]: NUM_INT_CONST {$val = $NUM_INT_CONST} | IDENT {$val = $IDENT};
-//casos returns [String val]: {$val = ""} | 'CASE' caso_p {$val = $caso_p.val;};
-//caso_p returns [String val]: '(' etiquetas ')' sentlist[null] casos {$val = $etiquetas.val + "\n" + $sentlist.lista + "break;\n" + $casos.val;} | 'DEFAULT' sentlist[null] {$val = "default:\n" + $sentlist.lista + "break;\n";};
-//etiquetas returns [String val]: simpvalue etiqueta_p[$simpvalue.val] {$val = $etiqueta_p.val;} | ':' simpvalue {$val = "case < " + $simpvalue.val + " :";};
-//etiqueta_p [String baseVal] returns [String val]: listaetiquetas {if ($listaetiquetas.val.isEmpty()) $val = "case " + $baseVal + " :"; else $val = "case " + $baseVal + " :\n" + $listaetiquetas.val;} |
-//    ':' etiqueta_secundaria {if ($etiqueta_secundaria.val.isEmpty()) $val = "case > " + $baseVal + " :\n"; else $val = "case " + $baseVal + " to " + $etiqueta_secundaria.val + ":\n";};
-//etiqueta_secundaria returns [String val]: {$val = "";} | simpvalue {$val = $simpvalue.val;};
-//listaetiquetas returns [String val]: {$val = "";} | ',' simpvalue l1=listaetiquetas {$val = "case " + $simpvalue.val + ":\n" + $l1.val;};
+casos[List<translation.statements.switchcase.CaseBlock> cases_h] returns [List<CaseBlock> cases_s]: {$cases_s = $cases_h;} | 'CASE' caso_p[$cases_h] {$cases_s = $caso_p.cases_s;};
+caso_p[List<translation.statements.switchcase.CaseBlock> cases_h] returns [List<translation.statements.switchcase.CaseBlock> cases_s]: {$cases_s = $cases_h;} '(' etiquetas ')' sentlist[$etiquetas.caseBlock.code] {$cases_s.add($etiquetas.caseBlock); blockDepth--;} casos[$cases_s] | {$cases_s = $cases_h; translation.statements.switchcase.RegularCaseBlock caseBlock = new translation.statements.switchcase.RegularCaseBlock();} 'DEFAULT' sentlist[caseBlock.code] {$cases_s.add(caseBlock); blockDepth--;};
+etiquetas returns [translation.statements.switchcase.CaseBlock caseBlock]: {List<String> labels = new ArrayList<String>();} simpvalue {labels.add($simpvalue.val);} etiqueta_p[labels] {
+    if($etiqueta_p.range) $caseBlock = new translation.statements.switchcase.RangeCaseBlock($simpvalue.val, $etiqueta_p.labels_s.get(0));
+    else $caseBlock = new translation.statements.switchcase.RegularCaseBlock($etiqueta_p.labels_s);
+} | ':' simpvalue {$caseBlock = new translation.statements.switchcase.RangeCaseBlock("", $simpvalue.val);};
+etiqueta_p[List<String> labels_h] returns [List<String> labels_s, boolean range]: listaetiquetas[$labels_h] {$labels_s = $listaetiquetas.labels_s; $range = false;} |
+    ':' etiqueta_secundaria {$labels_s = $labels_h; $labels_s.add($etiqueta_secundaria.val); $range = true;};
+etiqueta_secundaria returns [String val]: {$val = "";} | simpvalue {$val = $simpvalue.val;};
+listaetiquetas[List<String> labels_h] returns [List<String> labels_s]: {$labels_s = $labels_h;} | {$labels_s = $labels_h;} ',' simpvalue {$labels_s.add($simpvalue.val);} l1=listaetiquetas[$labels_s] {$labels_s = $l1.labels_s;};
 expcond returns [translation.statements.ExprStatement statement] : factorcond {$statement = new translation.statements.ExprStatement(); $statement.left = $factorcond.statement;} expcond_p[$statement];
 expcond_p[translation.statements.ExprStatement statement_h] returns [translation.statements.ExprStatement statement_s]: {$statement_s = $statement_h;} | {$statement_s = $statement_h;} oplog {$statement_s.operator = $oplog.val;} factorcond {$statement_s.right = $factorcond.statement;} e1=expcond_p[$statement_s];
 oplog returns [String val]: '.OR.' {$val = "||";} | '.AND.' {$val = "&&";} | '.EQV.' {$val = "!^";} | '.NEQV.' {$val = "^";};

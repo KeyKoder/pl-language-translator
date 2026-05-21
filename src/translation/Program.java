@@ -17,10 +17,12 @@ public class Program {
 
 	@Override
 	public String toString() {
-		return String.join("\n", dcls) + "\n\n"
-				+ vars.stream().map(v -> v.toString()+";").collect(Collectors.joining("\n")) + "\n\n"
-				+ functions.values().stream().map(function -> function.getHeader() + ";").collect(Collectors.joining("\n")) + "\n\n"
-				+ main.toString() + "\n\n"
-				+ functions.values().stream().filter(function -> !function.code.statements.isEmpty()).map(function -> function.toString()).collect(Collectors.joining("\n\n"));
+		String out = String.join("\n", dcls);
+		if(!vars.isEmpty()) out += "\n\n" + vars.stream().map(v -> v.toString()+";").collect(Collectors.joining("\n"));
+		if(!functions.isEmpty()) out += "\n\n" + functions.values().stream().map(function -> function.getHeader() + ";").collect(Collectors.joining("\n"));
+		out += "\n\n" + main.toString();
+		List<Function> fuctionsWithBodies = functions.values().stream().filter(function -> !function.code.statements.isEmpty()).toList();
+		if(!fuctionsWithBodies.isEmpty()) out +=  "\n\n" + functions.values().stream().filter(function -> !function.code.statements.isEmpty()).map(function -> function.toString()).collect(Collectors.joining("\n\n"));
+		return out;
 	}
 }

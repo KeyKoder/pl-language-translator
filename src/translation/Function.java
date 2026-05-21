@@ -49,7 +49,7 @@ public class Function {
 			if(s instanceof AssignStatement assignStatement && assignStatement.varname.equals(name)) {
 				return "return " + assignStatement.statement.toString() + ";";
 			}
-			return s.toString();
+			return s.toString() + ";";
 		}).collect(Collectors.joining("\n")) + "\n}";
 	}
 }

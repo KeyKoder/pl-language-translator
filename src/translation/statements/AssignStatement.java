@@ -11,6 +11,6 @@ public class AssignStatement implements BlockStatement {
 
 	@Override
 	public String toString() {
-		return varname + " = " + statement.toString() + ";";
+		return varname + " = " + statement.toString();
 	}
 }

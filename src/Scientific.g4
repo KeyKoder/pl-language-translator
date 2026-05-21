@@ -57,13 +57,13 @@ WS : (' ' | '\t' | NL) -> skip;
 // TODO: una vez tengamos pasado sentlist usando la clase translation.Block (que devuelva un block, o que modifique el heredado utilizando la referencia al objeto),
 //  cambiar la acción sintactica de "p.main = ..." a: {p.main.code = $sentlist.block;}
 
-prg : 'PROGRAM' IDENT ';' {p = new translation.Program();} dcllist header sentlist {p.main = "void main(void)\n{\n" + $sentlist.lista + "}\n";} 'END' 'PROGRAM' IDENT subproglist {System.out.println(p);};
+prg : 'PROGRAM' IDENT ';' {p = new translation.Program();} dcllist header sentlist[p.main.code] 'END' 'PROGRAM' IDENT subproglist {System.out.println(p);};
 dcllist : | tipo dcl[$tipo.type]; //Le pasa el tipo a dcl para las declaraciones de variables, que es necesario escribirlo
 header :  | 'INTERFACE' headlist 'END' 'INTERFACE';
 headlist : decproc decsubprog | decfun decsubprog;
 decsubprog :  | decproc decsubprog | decfun decsubprog;
-sentlist returns [String lista]: sent sentlist_p {$lista = $sent.s + $sentlist_p.lista_p;}; //Devuelve un String con todas las sentencias ya procesadas y en un formato correcto (string = s1 \n s2 \n s3...)
-sentlist_p returns [String lista_p]: {$lista_p = "";}| sent sl2=sentlist_p {$lista_p = $sent.s + $sl2.lista_p;};
+sentlist[translation.Block block] : sent {$block.statements.add($sent.statement);} sentlist_p[$block]; //Devuelve un String con todas las sentencias ya procesadas y en un formato correcto (string = s1 \n s2 \n s3...)
+sentlist_p[translation.Block block] : | sent {$block.statements.add($sent.statement);} sl2=sentlist_p[$block];
 
 // Syntax declarations (TODO: Creo que está terminado, revisar)
 dcl [translation.Type type]: ',' 'PARAMETER' '::' IDENT '=' simpvalue {p.dcls.add("#define "+ $IDENT.text + " " + $simpvalue.val);} ctelist ';' dcllist | '::' varlist[new translation.Variables($type)] {p.vars.add($varlist.vars_s);} ';' dcllist;
@@ -94,24 +94,25 @@ dec_f_paramlist[List<Pair<translation.Type, String>> params_h] returns [List<Pai
 
 //Syntax for assignations (TODO: Creo que está terminado, revisar)
 //Cada línea añade lo que tiene, y el formato de cada tipo de sentencia se pone bien en cada uno (espacios, saltos de línea, etc)
-sent returns [String s]: IDENT '=' exp ';' {$s = $IDENT.text + " = " + $exp.val + ";\n";}| proc_call ';' {$s = $proc_call.val + ";\n";} | 'IF' '(' expcond ')' sent_if[$expcond.val] {$s = $sent_if.val;} | 'DO' sent_do {$s = $sent_do.val;} |
-    'SELECT' 'CASE' '(' exp ')' casos 'END' 'SELECT' {$s = "switch (" + $exp.val + ") {\n" + $casos.val + "}\n";};
-exp returns [String val]: factor exp_p {$val = $factor.val + " " + $exp_p.val;};
-exp_p returns [String val]: op exp exp_p  {$val = $op.val + " " + $exp.val + " " + $exp_p.val;} | {$val = "";};
+sent returns [translation.statements.Statement statement]: IDENT '=' exp ';' {$statement = new translation.statements.AssignStatement($IDENT.text, $exp.statement);}| proc_call ';' {$statement = $proc_call.statement;};
+// | 'IF' '(' expcond ')' sent_if[$expcond.val] {/*$statement = $sent_if.val;*/} | 'DO' sent_do {/*$statement = $sent_do.val;*/} |
+//    'SELECT' 'CASE' '(' exp ')' casos 'END' 'SELECT' {/*$statement = "switch (" + $exp.statement + ") {\n" + $casos.val + "}\n";*/};
+exp returns [translation.statements.ExprStatement statement] : factor {$statement = new translation.statements.ExprStatement(); $statement.left = $factor.statement;} exp_p[$statement];
+exp_p[translation.statements.ExprStatement statement_h] returns [translation.statements.ExprStatement statement_s]: {$statement_s = $statement_h;} op {$statement_s.operator = $op.val;} exp {$statement_s.right = $exp.statement;} exp_p[$statement_s] | {$statement_s = $statement_h;};
 op returns [String val]: '+' {$val = "+";} | '-' {$val = "-";} | '*' {$val = "*";} | '/' {$val = "/";};
-factor returns [String val]: simpvalue {$val = $simpvalue.val;} | '(' exp ')' {$val = '(' + $exp.val + ')';} | IDENT subpparamlist {$val = $IDENT.text + " " + $subpparamlist.val;};
-explist returns [String val]: ',' exp expl1=explist {$val = ", " + $exp.val + $expl1.val;}| {$val = "";};
-proc_call returns [String val]: 'CALL' IDENT subpparamlist {$val = $IDENT.text + $subpparamlist.val;};
-subpparamlist returns [String val]: '(' exp explist ')' {$val = '(' + $exp.val + $explist.val;} | {$val = "";};
+factor returns [translation.statements.InlineStatement statement]: simpvalue {$statement = new translation.statements.SimpleStringStatement($simpvalue.val);} | '(' exp ')' {$statement = $exp.statement;} | IDENT {$statement = new translation.statements.ProcedureCallStatement($IDENT.text);} subpparamlist[(translation.statements.GenericCallOrIdentifierStatement)$statement];
+explist[List<translation.statements.InlineStatement> val_h] returns [List<translation.statements.InlineStatement> val_s] : {$val_s = $val_h;} ',' exp {$val_s.add($exp.statement);} expl1=explist[$val_s] {$val_s = $expl1.val_s;} | {$val_s = $val_h;};
+proc_call returns [translation.statements.ProcedureCallStatement statement]: 'CALL' IDENT {$statement = new translation.statements.ProcedureCallStatement($IDENT.text);} subpparamlist[$statement] {$statement = (translation.statements.ProcedureCallStatement)$subpparamlist.val_s;};
+subpparamlist[translation.statements.GenericCallOrIdentifierStatement val_h] returns [translation.statements.GenericCallOrIdentifierStatement val_s]: {$val_s = $val_h;} '(' exp {$val_s.paramList.add($exp.statement);} explist[$val_s.paramList] ')' {$val_s.paramList = $explist.val_s;} | {$val_s = $val_h; $val_s.hasParams = false;};
 
 
 //Syntax for flux control TODO falta meterlo en los objetos, pero la logica ya esta hecha
-sent_if [String cond] returns [String val]: sent {$val = "if (" + $cond + ") {\n\t" + $sent.s + "}\n";} | 'THEN' sentlist sent_if_p {$val = "if (" + $cond + ") {\n" + $sentlist.lista + "}\n" + $sent_if_p.val;};
-sent_if_p returns [String val]: 'ENDIF' {$val = ""}| 'ELSE' sentlist 'ENDIF' {$val = "else {\n" + $sentlist.lista + "}\n";};
-sent_do returns [String val]: 'WHILE' '(' expcond ')' sentlist 'ENDDO' {$val = "while (" + $expcond.val + ") {\n" + $sentlist.lista + "}\n";} | IDENT '=' d1=doval ',' d2=doval ',' d3=doval sentlist 'ENDDO' {$val = "for (" + $IDENT.text + "=" + $d1.val + "; " + $IDENT.text + "!=" + $d2.val + "; " + $IDENT.text + "=" + $IDENT.text + "+" + $d3.val + ") {\n" + $sentlist.lista + "}\n";};
+sent_if [String cond] returns [String val]: sent {$val = "if (" + $cond + ") {\n\t" + $sent.statement + "}\n";} | 'THEN' sentlist[null] sent_if_p {$val = "if (" + $cond + ") {\n" + $sentlist.lista + "}\n" + $sent_if_p.val;};
+sent_if_p returns [String val]: 'ENDIF' {$val = ""}| 'ELSE' sentlist[null] 'ENDIF' {$val = "else {\n" + $sentlist.lista + "}\n";};
+sent_do returns [String val]: 'WHILE' '(' expcond ')' sentlist[null] 'ENDDO' {$val = "while (" + $expcond.val + ") {\n" + $sentlist.lista + "}\n";} | IDENT '=' d1=doval ',' d2=doval ',' d3=doval sentlist[null] 'ENDDO' {$val = "for (" + $IDENT.text + "=" + $d1.val + "; " + $IDENT.text + "!=" + $d2.val + "; " + $IDENT.text + "=" + $IDENT.text + "+" + $d3.val + ") {\n" + $sentlist.lista + "}\n";};
 doval returns [String val]: NUM_INT_CONST {$val = $NUM_INT_CONST} | IDENT {$val = $IDENT};
 casos returns [String val]: {$val = ""} | 'CASE' caso_p {$val = $caso_p.val;};
-caso_p returns [String val]: '(' etiquetas ')' sentlist casos {$val = $etiquetas.val + "\n" + $sentlist.lista + "break;\n" + $casos.val;} | 'DEFAULT' sentlist {$val = "default:\n" + $sentlist.lista + "break;\n";};
+caso_p returns [String val]: '(' etiquetas ')' sentlist[null] casos {$val = $etiquetas.val + "\n" + $sentlist.lista + "break;\n" + $casos.val;} | 'DEFAULT' sentlist[null] {$val = "default:\n" + $sentlist.lista + "break;\n";};
 etiquetas returns [String val]: simpvalue etiqueta_p[$simpvalue.val] {$val = $etiqueta_p.val;} | ':' simpvalue {$val = "case < " + $simpvalue.val + " :";};
 etiqueta_p [String baseVal] returns [String val]: listaetiquetas {if ($listaetiquetas.val.isEmpty()) $val = "case " + $baseVal + " :"; else $val = "case " + $baseVal + " :\n" + $listaetiquetas.val;} |
     ':' etiqueta_secundaria {if ($etiqueta_secundaria.val.isEmpty()) $val = "case > " + $baseVal + " :\n"; else $val = "case " + $baseVal + " to " + $etiqueta_secundaria.val + ":\n";};
@@ -127,8 +128,8 @@ opcomp returns [String val]: '<' {$val = "<";} | '>' {$val = ">";} | '<=' {$val 
 
 //Syntax for functions implementation
 subproglist : codproc subproglist | codfun subproglist | ;
-codproc : 'SUBROUTINE' IDENT formal_paramlist y1 sentlist 'END' 'SUBROUTINE' IDENT;
-codfun : 'FUNCTION' IDENT '(' nomparamlist ')' tipo '::' IDENT ';' z1 sentlist IDENT '=' exp ';'
+codproc : 'SUBROUTINE' subroutineName=IDENT formal_paramlist y1 sentlist[p.functions.get($subroutineName.text).code] 'END' 'SUBROUTINE' IDENT;
+codfun : 'FUNCTION' functionName=IDENT '(' nomparamlist ')' tipo '::' IDENT ';' z1 sentlist[p.functions.get($functionName.text).code]
     'END' 'FUNCTION' IDENT;
 
 

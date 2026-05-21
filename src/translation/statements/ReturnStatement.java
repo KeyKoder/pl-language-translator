@@ -9,6 +9,6 @@ public class ReturnStatement implements BlockStatement {
 
 	@Override
 	public String toString() {
-		return "return " + returnValue.toString() + ";";
+		return "return " + returnValue.toString();
 	}
 }

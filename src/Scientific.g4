@@ -92,36 +92,36 @@ dec_f_paramlist[List<Pair<translation.Type, String>> params_h] returns [List<Pai
 
 
 
-//Syntax for assignations (TODO: Creo que está terminado, revisar)
+//Syntax for assignations
 //Cada línea añade lo que tiene, y el formato de cada tipo de sentencia se pone bien en cada uno (espacios, saltos de línea, etc)
-sent returns [translation.statements.Statement statement]: IDENT '=' exp ';' {$statement = new translation.statements.AssignStatement($IDENT.text, $exp.statement);}| proc_call ';' {$statement = $proc_call.statement;};
-// | 'IF' '(' expcond ')' sent_if[$expcond.val] {/*$statement = $sent_if.val;*/} | 'DO' sent_do {/*$statement = $sent_do.val;*/} |
-//    'SELECT' 'CASE' '(' exp ')' casos 'END' 'SELECT' {/*$statement = "switch (" + $exp.statement + ") {\n" + $casos.val + "}\n";*/};
+sent returns [translation.statements.Statement statement]: IDENT '=' exp ';' {$statement = new translation.statements.AssignStatement($IDENT.text, $exp.statement);}| proc_call ';' {$statement = $proc_call.statement;} |
+    'IF' '(' expcond ')' sent_if[$expcond.statement] {$statement = $sent_if.statement_s;}; // | 'DO' sent_do {$statement = $sent_do.val;} |
+//    'SELECT' 'CASE' '(' exp ')' casos 'END' 'SELECT' {$statement = "switch (" + $exp.statement + ") {\n" + $casos.val + "}\n";};
 exp returns [translation.statements.ExprStatement statement] : factor {$statement = new translation.statements.ExprStatement(); $statement.left = $factor.statement;} exp_p[$statement];
 exp_p[translation.statements.ExprStatement statement_h] returns [translation.statements.ExprStatement statement_s]: {$statement_s = $statement_h;} op {$statement_s.operator = $op.val;} exp {$statement_s.right = $exp.statement;} exp_p[$statement_s] | {$statement_s = $statement_h;};
 op returns [String val]: '+' {$val = "+";} | '-' {$val = "-";} | '*' {$val = "*";} | '/' {$val = "/";};
-factor returns [translation.statements.InlineStatement statement]: simpvalue {$statement = new translation.statements.SimpleStringStatement($simpvalue.val);} | '(' exp ')' {$statement = $exp.statement;} | IDENT {$statement = new translation.statements.ProcedureCallStatement($IDENT.text);} subpparamlist[(translation.statements.GenericCallOrIdentifierStatement)$statement];
+factor returns [translation.statements.InlineStatement statement]: simpvalue {$statement = new translation.statements.SimpleStringStatement($simpvalue.val);} | '(' exp ')' {$exp.statement.hasParenthesis = true; $statement = $exp.statement;} | IDENT {$statement = new translation.statements.ProcedureCallStatement($IDENT.text);} subpparamlist[(translation.statements.GenericCallOrIdentifierStatement)$statement];
 explist[List<translation.statements.InlineStatement> val_h] returns [List<translation.statements.InlineStatement> val_s] : {$val_s = $val_h;} ',' exp {$val_s.add($exp.statement);} expl1=explist[$val_s] {$val_s = $expl1.val_s;} | {$val_s = $val_h;};
 proc_call returns [translation.statements.ProcedureCallStatement statement]: 'CALL' IDENT {$statement = new translation.statements.ProcedureCallStatement($IDENT.text);} subpparamlist[$statement] {$statement = (translation.statements.ProcedureCallStatement)$subpparamlist.val_s;};
 subpparamlist[translation.statements.GenericCallOrIdentifierStatement val_h] returns [translation.statements.GenericCallOrIdentifierStatement val_s]: {$val_s = $val_h;} '(' exp {$val_s.paramList.add($exp.statement);} explist[$val_s.paramList] ')' {$val_s.paramList = $explist.val_s;} | {$val_s = $val_h; $val_s.hasParams = false;};
 
 
 //Syntax for flux control TODO falta meterlo en los objetos, pero la logica ya esta hecha
-sent_if [String cond] returns [String val]: sent {$val = "if (" + $cond + ") {\n\t" + $sent.statement + "}\n";} | 'THEN' sentlist[null] sent_if_p {$val = "if (" + $cond + ") {\n" + $sentlist.lista + "}\n" + $sent_if_p.val;};
-sent_if_p returns [String val]: 'ENDIF' {$val = ""}| 'ELSE' sentlist[null] 'ENDIF' {$val = "else {\n" + $sentlist.lista + "}\n";};
-sent_do returns [String val]: 'WHILE' '(' expcond ')' sentlist[null] 'ENDDO' {$val = "while (" + $expcond.val + ") {\n" + $sentlist.lista + "}\n";} | IDENT '=' d1=doval ',' d2=doval ',' d3=doval sentlist[null] 'ENDDO' {$val = "for (" + $IDENT.text + "=" + $d1.val + "; " + $IDENT.text + "!=" + $d2.val + "; " + $IDENT.text + "=" + $IDENT.text + "+" + $d3.val + ") {\n" + $sentlist.lista + "}\n";};
-doval returns [String val]: NUM_INT_CONST {$val = $NUM_INT_CONST} | IDENT {$val = $IDENT};
-casos returns [String val]: {$val = ""} | 'CASE' caso_p {$val = $caso_p.val;};
-caso_p returns [String val]: '(' etiquetas ')' sentlist[null] casos {$val = $etiquetas.val + "\n" + $sentlist.lista + "break;\n" + $casos.val;} | 'DEFAULT' sentlist[null] {$val = "default:\n" + $sentlist.lista + "break;\n";};
-etiquetas returns [String val]: simpvalue etiqueta_p[$simpvalue.val] {$val = $etiqueta_p.val;} | ':' simpvalue {$val = "case < " + $simpvalue.val + " :";};
-etiqueta_p [String baseVal] returns [String val]: listaetiquetas {if ($listaetiquetas.val.isEmpty()) $val = "case " + $baseVal + " :"; else $val = "case " + $baseVal + " :\n" + $listaetiquetas.val;} |
-    ':' etiqueta_secundaria {if ($etiqueta_secundaria.val.isEmpty()) $val = "case > " + $baseVal + " :\n"; else $val = "case " + $baseVal + " to " + $etiqueta_secundaria.val + ":\n";};
-etiqueta_secundaria returns [String val]: {$val = "";} | simpvalue {$val = $simpvalue.val;};
-listaetiquetas returns [String val]: {$val = "";} | ',' simpvalue l1=listaetiquetas {$val = "case " + $simpvalue.val + ":\n" + $l1.val;};
-expcond returns [String val]: factorcond expcond_p {$val = $factorcond.val + $expcond_p.val;};
-expcond_p returns [String val]: {$val = "";} | oplog factorcond e1=expcond_p {$val = " " + $oplog.val + " " + $factorcond.val + $e1.val;};
+sent_if [translation.statements.ExprStatement cond] returns [translation.statements.IfStatement statement_s] : sent {$statement_s = new translation.statements.IfStatement($cond); $statement_s.code.statements.add($sent.statement);} | {$statement_s = new translation.statements.IfStatement($cond);} 'THEN' sentlist[$statement_s.code] sent_if_p[$statement_s];
+sent_if_p [translation.statements.IfStatement statement_h] returns [translation.statements.IfStatement statement_s] : 'ENDIF' {$statement_s = $statement_h;} | {$statement_s = $statement_h;} 'ELSE' sentlist[$statement_s.elseCode] 'ENDIF';
+//sent_do returns [String val]: 'WHILE' '(' expcond ')' sentlist[null] 'ENDDO' {$val = "while (" + $expcond.val + ") {\n" + $sentlist.lista + "}\n";} | IDENT '=' d1=doval ',' d2=doval ',' d3=doval sentlist[null] 'ENDDO' {$val = "for (" + $IDENT.text + "=" + $d1.val + "; " + $IDENT.text + "!=" + $d2.val + "; " + $IDENT.text + "=" + $IDENT.text + "+" + $d3.val + ") {\n" + $sentlist.lista + "}\n";};
+//doval returns [String val]: NUM_INT_CONST {$val = $NUM_INT_CONST} | IDENT {$val = $IDENT};
+//casos returns [String val]: {$val = ""} | 'CASE' caso_p {$val = $caso_p.val;};
+//caso_p returns [String val]: '(' etiquetas ')' sentlist[null] casos {$val = $etiquetas.val + "\n" + $sentlist.lista + "break;\n" + $casos.val;} | 'DEFAULT' sentlist[null] {$val = "default:\n" + $sentlist.lista + "break;\n";};
+//etiquetas returns [String val]: simpvalue etiqueta_p[$simpvalue.val] {$val = $etiqueta_p.val;} | ':' simpvalue {$val = "case < " + $simpvalue.val + " :";};
+//etiqueta_p [String baseVal] returns [String val]: listaetiquetas {if ($listaetiquetas.val.isEmpty()) $val = "case " + $baseVal + " :"; else $val = "case " + $baseVal + " :\n" + $listaetiquetas.val;} |
+//    ':' etiqueta_secundaria {if ($etiqueta_secundaria.val.isEmpty()) $val = "case > " + $baseVal + " :\n"; else $val = "case " + $baseVal + " to " + $etiqueta_secundaria.val + ":\n";};
+//etiqueta_secundaria returns [String val]: {$val = "";} | simpvalue {$val = $simpvalue.val;};
+//listaetiquetas returns [String val]: {$val = "";} | ',' simpvalue l1=listaetiquetas {$val = "case " + $simpvalue.val + ":\n" + $l1.val;};
+expcond returns [translation.statements.ExprStatement statement] : factorcond {$statement = new translation.statements.ExprStatement(); $statement.left = $factorcond.statement;} expcond_p[$statement];
+expcond_p[translation.statements.ExprStatement statement_h] returns [translation.statements.ExprStatement statement_s]: {$statement_s = $statement_h;} | {$statement_s = $statement_h;} oplog {$statement_s.operator = $oplog.val;} factorcond {$statement_s.right = $factorcond.statement;} e1=expcond_p[$statement_s];
 oplog returns [String val]: '.OR.' {$val = "||";} | '.AND.' {$val = "&&";} | '.EQV.' {$val = "!^";} | '.NEQV.' {$val = "^";};
-factorcond returns [String val]: e1=exp opcomp e2=exp {$val = $e1.val + " " + $opcomp.val + " " + $e2.val;} | '(' expcond ')' {$val = "(" + $expcond.val + ")";} | '.NOT.' f1=factorcond {$val = "!" + $f1.val;} | '.TRUE.' {$val = "1";} | '.FALSE.' {$val = "0";};
+factorcond returns [translation.statements.InlineStatement statement]: e1=exp opcomp e2=exp {$statement = new translation.statements.ExprStatement($e1.statement, $opcomp.val, $e2.statement);} | '(' expcond ')' {$expcond.statement.hasParenthesis = true; $statement = $expcond.statement;} | '.NOT.' f1=factorcond {$statement = new translation.statements.ExprStatement(); ((translation.statements.ExprStatement)$statement).operator = "!"; ((translation.statements.ExprStatement)$statement).right = $f1.statement;} | '.TRUE.' {$statement = new translation.statements.SimpleStringStatement("1");} | '.FALSE.' {$statement = new translation.statements.SimpleStringStatement("0");};
 opcomp returns [String val]: '<' {$val = "<";} | '>' {$val = ">";} | '<=' {$val = "<=";} | '>=' {$val = ">=";} | '==' {$val = "==";} | '/=' {$val = "!=";};
 
 

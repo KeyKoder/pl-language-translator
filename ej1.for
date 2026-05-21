@@ -52,6 +52,16 @@ CHARACTER (10):: var7, var8;
     total = total + 45.6;
     CALL ImprimirMensaje('Bienvenido');
     promedio = total / 2.0;
+    promedio = total / (2.0 + contador / -1);
+
+    IF (2 >= 1 .OR. .TRUE.) THEN
+        contador = contador - 1;
+        total = 3;
+    ELSE
+        total = Sumar(total, 3) * -1;
+    ENDIF
+
+    IF (.NOT. (contador > 3) .AND. total < 4) CALL ImprimirMensaje("Mensaje debug");
 
 END PROGRAM prog1
 

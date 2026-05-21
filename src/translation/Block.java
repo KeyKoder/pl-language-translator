@@ -11,6 +11,6 @@ public class Block {
 
 	@Override
 	public String toString() {
-		return "{\n" + String.join("\n", statements.stream().map(Object::toString).collect(Collectors.toSet())) + "\n}";
+		return "{\n" + String.join("\n", statements.stream().map(s -> s.toString() + ";").collect(Collectors.toSet())) + "\n}";
 	}
 }

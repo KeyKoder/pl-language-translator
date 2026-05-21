@@ -17,12 +17,13 @@ public class Program {
 
 	@Override
 	public String toString() {
-		String out = String.join("\n", dcls);
-		if(!vars.isEmpty()) out += "\n\n" + vars.stream().map(v -> v.toString()+";").collect(Collectors.joining("\n"));
-		if(!functions.isEmpty()) out += "\n\n" + functions.values().stream().map(function -> function.getHeader() + ";").collect(Collectors.joining("\n"));
-		out += "\n\n" + main.toString();
+		String out = "";
+		if(!dcls.isEmpty()) out += String.join("\n", dcls) + "\n\n";
+		if(!vars.isEmpty()) out += vars.stream().map(v -> v.toString()+";").collect(Collectors.joining("\n")) + "\n\n";
+		if(!functions.isEmpty()) out += functions.values().stream().map(function -> function.getHeader() + ";").collect(Collectors.joining("\n")) + "\n\n";
+		out += main.toString() + "\n\n";
 		List<Function> fuctionsWithBodies = functions.values().stream().filter(function -> !function.code.statements.isEmpty()).toList();
-		if(!fuctionsWithBodies.isEmpty()) out +=  "\n\n" + functions.values().stream().filter(function -> !function.code.statements.isEmpty()).map(function -> function.toString()).collect(Collectors.joining("\n\n"));
+		if(!fuctionsWithBodies.isEmpty()) out +=  functions.values().stream().filter(function -> !function.code.statements.isEmpty()).map(function -> function.toString()).collect(Collectors.joining("\n\n")) + "\n\n";
 		return out;
 	}
 }

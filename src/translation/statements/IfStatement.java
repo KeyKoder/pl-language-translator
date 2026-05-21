@@ -2,7 +2,7 @@ package translation.statements;
 
 import translation.Block;
 
-public class IfStatement implements BlockStatement {
+public class IfStatement implements BlockStatement, CompositeStatement {
 	public InlineStatement condition;
 	public Block code;
 	public Block elseCode; // this may be empty if there is no else statement

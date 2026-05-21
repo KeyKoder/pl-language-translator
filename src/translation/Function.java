@@ -45,11 +45,6 @@ public class Function {
 
 	@Override
 	public String toString() {
-		return getHeader() + "\n{\n" + code.statements.stream().map(s -> {
-			if(s instanceof AssignStatement assignStatement && assignStatement.varname.equals(name)) {
-				return "return " + assignStatement.statement.toString() + ";";
-			}
-			return s.toString() + ";";
-		}).collect(Collectors.joining("\n")) + "\n}";
+		return getHeader() + " " + code.toString();
 	}
 }

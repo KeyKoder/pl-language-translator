@@ -1,7 +1,22 @@
 grammar Scientific;
 
+/*
+   RAZONAMIENTO SOBRE POR QUE UTILIZAMOS @members
+   Podríamos haber ido pasando blockDepth hacia abajo partiendo desde sentlist hasta las producciones/reglas
+   que lo necesitaran utilizando atributos heredados, pero pensamos que sería más limpio hacerlo de esta manera
+   en vez de llenar todas las producciones/reglas con un atributo que la mayoría no utilizaría.
+
+   El mismo razonamiento aplica a tener Program aquí, no querer añadir un atributo extra a básicamente todas las reglas de la gramática.
+   --------------------------------
+   REASONING AS TO WHY WE USED @members
+   This could also be done by passing the current blockDepth down from sentlist to the rules that need them using inherited attributes,
+   but we felt it looks cleaner doing it this way instead of bloating the rules with an attribute most of them wont use.
+
+   same reasoning with having Program here, not wanting to add an extra attribute to basically every rule in the grammar.
+*/
 @members {
     translation.Program p;
+    int blockDepth = 0;
 }
 
 
@@ -57,12 +72,12 @@ WS : (' ' | '\t' | NL) -> skip;
 // TODO: una vez tengamos pasado sentlist usando la clase translation.Block (que devuelva un block, o que modifique el heredado utilizando la referencia al objeto),
 //  cambiar la acción sintactica de "p.main = ..." a: {p.main.code = $sentlist.block;}
 
-prg : 'PROGRAM' IDENT ';' {p = new translation.Program();} dcllist header sentlist[p.main.code] 'END' 'PROGRAM' IDENT subproglist {System.out.println(p);};
+prg : 'PROGRAM' IDENT ';' {p = new translation.Program();} dcllist header sentlist[p.main.code]  'END' 'PROGRAM' IDENT {blockDepth--;} subproglist {System.out.println(p);};
 dcllist : | tipo dcl[$tipo.type]; //Le pasa el tipo a dcl para las declaraciones de variables, que es necesario escribirlo
 header :  | 'INTERFACE' headlist 'END' 'INTERFACE';
 headlist : decproc decsubprog | decfun decsubprog;
 decsubprog :  | decproc decsubprog | decfun decsubprog;
-sentlist[translation.Block block] : sent {$block.statements.add($sent.statement);} sentlist_p[$block]; //Devuelve un String con todas las sentencias ya procesadas y en un formato correcto (string = s1 \n s2 \n s3...)
+sentlist[translation.Block block] : {block.depth = blockDepth++;} sent {$block.statements.add($sent.statement);} sentlist_p[$block]; //Devuelve un String con todas las sentencias ya procesadas y en un formato correcto (string = s1 \n s2 \n s3...)
 sentlist_p[translation.Block block] : | sent {$block.statements.add($sent.statement);} sl2=sentlist_p[$block];
 
 // Syntax declarations (TODO: Creo que está terminado, revisar)
@@ -107,8 +122,8 @@ subpparamlist[translation.statements.GenericCallOrIdentifierStatement val_h] ret
 
 
 //Syntax for flux control TODO falta meterlo en los objetos, pero la logica ya esta hecha
-sent_if [translation.statements.ExprStatement cond] returns [translation.statements.IfStatement statement_s] : sent {$statement_s = new translation.statements.IfStatement($cond); $statement_s.code.statements.add($sent.statement);} | {$statement_s = new translation.statements.IfStatement($cond);} 'THEN' sentlist[$statement_s.code] sent_if_p[$statement_s];
-sent_if_p [translation.statements.IfStatement statement_h] returns [translation.statements.IfStatement statement_s] : 'ENDIF' {$statement_s = $statement_h;} | {$statement_s = $statement_h;} 'ELSE' sentlist[$statement_s.elseCode] 'ENDIF';
+sent_if [translation.statements.ExprStatement cond] returns [translation.statements.IfStatement statement_s] : sent {$statement_s = new translation.statements.IfStatement($cond); $statement_s.code.depth = blockDepth; $statement_s.code.statements.add($sent.statement);} | {$statement_s = new translation.statements.IfStatement($cond);} 'THEN' sentlist[$statement_s.code] sent_if_p[$statement_s];
+sent_if_p [translation.statements.IfStatement statement_h] returns [translation.statements.IfStatement statement_s] : 'ENDIF' {$statement_s = $statement_h; blockDepth--;} | {$statement_s = $statement_h; blockDepth--;} 'ELSE' sentlist[$statement_s.elseCode] 'ENDIF' {blockDepth--;};
 //sent_do returns [String val]: 'WHILE' '(' expcond ')' sentlist[null] 'ENDDO' {$val = "while (" + $expcond.val + ") {\n" + $sentlist.lista + "}\n";} | IDENT '=' d1=doval ',' d2=doval ',' d3=doval sentlist[null] 'ENDDO' {$val = "for (" + $IDENT.text + "=" + $d1.val + "; " + $IDENT.text + "!=" + $d2.val + "; " + $IDENT.text + "=" + $IDENT.text + "+" + $d3.val + ") {\n" + $sentlist.lista + "}\n";};
 //doval returns [String val]: NUM_INT_CONST {$val = $NUM_INT_CONST} | IDENT {$val = $IDENT};
 //casos returns [String val]: {$val = ""} | 'CASE' caso_p {$val = $caso_p.val;};
@@ -128,9 +143,9 @@ opcomp returns [String val]: '<' {$val = "<";} | '>' {$val = ">";} | '<=' {$val 
 
 //Syntax for functions implementation
 subproglist : codproc subproglist | codfun subproglist | ;
-codproc : 'SUBROUTINE' subroutineName=IDENT formal_paramlist y1 sentlist[p.functions.get($subroutineName.text).code] 'END' 'SUBROUTINE' IDENT;
-codfun : 'FUNCTION' functionName=IDENT '(' nomparamlist ')' tipo '::' IDENT ';' z1 sentlist[p.functions.get($functionName.text).code]
-    'END' 'FUNCTION' IDENT;
+codproc : 'SUBROUTINE' subroutineName=IDENT formal_paramlist y1 sentlist[p.functions.get($subroutineName.text).code] {blockDepth--;} 'END' 'SUBROUTINE' subroutineNameEnd=IDENT;
+codfun : 'FUNCTION' functionName=IDENT '(' nomparamlist ')' tipo '::' IDENT ';' z1 sentlist[p.functions.get($functionName.text).code] {blockDepth--;} functionNameReturn=IDENT '=' exp ';' {p.functions.get($functionName.text).code.statements.add(new translation.statements.ReturnStatement($exp.statement));}
+    'END' 'FUNCTION' functionNameEnd=IDENT;
 
 
 y1 : | tipo y2[$tipo.type];

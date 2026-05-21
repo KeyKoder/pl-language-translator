@@ -1,5 +1,3 @@
 NUM_INT_CONST_B : 'b' '\''[01]+'\''
 NUM_INT_CONST_O : 'o' '\''[0-7]+'\''
 NUM_INT_CONST_H : 'z' '\''[0-9A-F]+'\''
-
-CTE_LOGICA : '.TRUE.' | '.FALSE.'

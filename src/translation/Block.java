@@ -17,6 +17,6 @@ public class Block {
 			String out = s.toString();
 			if(!(s instanceof CompositeStatement)) out += ";";
 			return out;
-		}).collect(Collectors.toSet())) + "\n" + "\t".repeat(depth) + "}";
+		}).toList()) + "\n" + "\t".repeat(depth) + "}";
 	}
 }

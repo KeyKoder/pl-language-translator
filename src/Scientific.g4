@@ -73,9 +73,6 @@ WS : (' ' | '\t' | NL) -> skip;
 
 */
 
-// TODO: una vez tengamos pasado sentlist usando la clase translation.Block (que devuelva un block, o que modifique el heredado utilizando la referencia al objeto),
-//  cambiar la acción sintactica de "p.main = ..." a: {p.main.code = $sentlist.block;}
-
 prg : 'PROGRAM' IDENT ';' {p = new translation.Program();} dcllist header sentlist[p.main.code]  'END' 'PROGRAM' IDENT {blockDepth--;} subproglist {System.out.println(p);};
 dcllist : | tipo dcl[$tipo.type]; //Le pasa el tipo a dcl para las declaraciones de variables, que es necesario escribirlo
 header :  | 'INTERFACE' headlist 'END' 'INTERFACE';

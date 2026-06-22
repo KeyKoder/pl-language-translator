@@ -25,7 +25,7 @@ grammar Scientific;
 
 
 // prg
-r : prg;
+r returns [translation.Program prog] : prg {$prog = p;};
 
 // Lexer tokens
 

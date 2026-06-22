@@ -3,10 +3,12 @@ import org.antlr.v4.runtime.CharStreams;
 import org.antlr.v4.runtime.CommonTokenStream;
 import org.antlr.v4.runtime.misc.Pair;
 import translation.Function;
+import translation.Program;
 import translation.Type;
 import translation.Variables;
 import translation.statements.*;
 
+import java.io.FileWriter;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
@@ -42,7 +44,10 @@ public class Main {
             gramática
             */
 
-			anasint.r();
+			Program p = anasint.r().prog;
+			try (FileWriter fw = new FileWriter(args[0].replace(".for", ".c"))) {
+				fw.write(p.toString());
+			}
 		} catch (org.antlr.v4.runtime.RecognitionException e) {
 			//Fallo al reconocer la entrada
 			System.err.println("REC " + e.getMessage());
